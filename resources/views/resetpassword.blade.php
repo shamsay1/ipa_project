@@ -168,11 +168,12 @@
             <input type="email" name="email" placeholder="Enter your email" required>
         </div>
         
-        <div class="remember-forgot">
-            <a href="/">Back to login</a>
-        </div>
+       
         
         <button type="submit">Send Link</button>
+         <div class="remember-forgot">
+            <a href="/">Back to login</a>
+        </div>
     </form>
     </div>
 </body>

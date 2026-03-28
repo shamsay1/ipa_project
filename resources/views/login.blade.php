@@ -170,14 +170,14 @@
                 @endif
             </div>
             
-            <div class="remember-forgot">
+            <div class="remember-forgot text-end">
             
                 <a href="{{ route("password.request") }}">Forgot password?</a>
             </div>
             
             <button type="submit">Login</button>
             <br><br>
-            <span style="font-size: 12px">V.01</span>
+            <span style="font-size: 12px;text-align: center">V.01</span>
            
         </form>
     </div>
