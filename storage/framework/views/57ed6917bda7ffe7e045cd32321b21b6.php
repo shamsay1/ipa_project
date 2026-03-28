@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="<?php echo e(str_replace('_', '-', app()->getLocale())); ?>">
+<head>
+    <meta charset="UTF-8">
+    <meta name="csrf-token" content="<?php echo e(csrf_token()); ?>">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Timetable Management System - Admin Dashboard</title>
+     <link rel="icon" type="image/png" href="<?php echo e(asset('ipalogo1.png')); ?>">
+
+<!-- Bootstrap CSS -->
+
+<link
+  href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+  rel="stylesheet"
+  integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
+  crossorigin="anonymous"
+>
+
+<!-- Bootstrap Icons -->
+<link
+  rel="stylesheet"
+  href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"
+>
+
+    
+    <style>
+        body {
+            overflow: hidden;
+            background-color: #f8f9fa;
+        }
+        #navbar {
+            height: 60px;
+            background-color: rgb(57, 57, 196);
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s;
+        }
+        #sidebar {
+            width: 220px;
+            height: calc(100vh - 60px);
+            background-color: #212529;
+            position: fixed;
+            left: 0;
+            top: 60px;
+            z-index: 900;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s;
+            overflow-y: auto;
+        }
+        #sidebar .nav-link {
+            color: #989fa7;
+            padding: 0.6rem 0.8rem;
+            border-left: 3px solid transparent;
+            font-size: 0.9rem;
+            display: flex; /* Tumia flexbox kuweka icon na text vizuri */
+            align-items: center;
+        }
+        #sidebar .nav-link:hover {
+            color: #fff;
+            background-color: #656b70;
+            border-left: 3px solid #0d6efd;
+        }
+        #sidebar .nav-link.active {
+            color: #fff;
+            background-color: #343a40;
+            border-left: 3px solid #0d6efd;
+        }
+        #sidebar .nav-link i {
+            margin-right: 8px;
+            width: 20px;
+            text-align: center;
+        }
+        .sidebar-header {
+            padding: 1.2rem 0.8rem;
+            color: #fff;
+            border-bottom: 1px solid #343a40;
+        }
+        #content {
+            margin-left: 220px;
+            margin-top: 60px;
+            padding: 20px;
+            overflow-y: auto;
+            height: calc(100vh - 60px);
+            transition: all 0.3s;
+        }
+        
+        /* Staili mpya za Submenu/Accordion */
+        #accordionSidebar .nav-item .collapse .nav-link {
+            padding-left: 1.8rem; /* Kuweka nafasi kushoto kuonyesha ni submenu */
+            font-size: 0.85rem;
+            background-color: #2c3136; /* Rangi tofauti kidogo kwa submenu */
+            border-left: none; /* Ondoa mpaka wa kushoto */
+        }
+        #accordionSidebar .nav-item .collapse .nav-link:hover {
+            background-color: #343a40; /* Rangi ya hover ya submenu */
+            color: #fff;
+            border-left: 3px solid #0d6efd; /* Rudi na mpaka wa kushoto kwa hover */
+        }
+        
+        /* Staili ya kuondoa background na border ya Bootstrap Accordion default */
+        #accordionSidebar .nav-link.accordion-button {
+            background-color: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            color: #989fa7;
+        }
+
+        /* Staili ya kugeuza icon ya chevron inaposubmenu inafunguliwa */
+        .chevron-icon {
+            margin-left: auto; /* Peleka icon kulia */
+            font-size: 0.8em;
+            transition: transform 0.3s;
+        }
+        .nav-link.accordion-button[aria-expanded="true"] .chevron-icon {
+            transform: rotate(180deg);
+        }
+
+        /* Staili ya kuonyesha accordion iliyofunguliwa */
+        .nav-link.accordion-button.active-accordion {
+            color: #fff;
+            background-color: #343a40;
+            border-left: 3px solid #0d6efd;
+        }
+
+        /* ... CSS zako za awali hapa chini ... */
+
+        .dashboard-card {
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s;
+        }
+        .dashboard-card:hover {
+            transform: translateY(-5px);
+        }
+        .card-icon {
+            font-size: 2rem;
+            opacity: 0.8;
+        }
+        .stat-number {
+            font-size: 1.8rem;
+            font-weight: bold;
+        }
+        .recent-activities {
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            padding: 20px;
+        }
+        .activity-item {
+            border-left: 3px solid #0d6efd;
+            padding-left: 15px;
+            margin-bottom: 15px;
+        }
+        .activity-time {
+            font-size: 0.8rem;
+            color: #6c757d;
+        }
+        .chart-container {
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            padding: 20px;
+            height: 100%;
+        }
+        @media (max-width: 768px) {
+            #sidebar {
+                margin-left: -220px;
+                width: 220px;
+            }
+            #sidebar.active {
+                margin-left: 0;
+            }
+            #content {
+                margin-left: 0;
+            }
+            #sidebar.active ~ #content {
+                margin-left: 220px;
+            }
+            #sidebarCollapse {
+                display: block;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav id="navbar" class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm py-1">
+    <div class="container-fluid">
+
+        <button id="sidebarCollapse" class="btn btn-outline-light me-2 d-lg-none">
+            <i class="bi bi-list"></i>
+        </button>
+
+        <a class="navbar-brand mx-auto d-none d-lg-block" 
+            style="font-size: 22px; color: white; font-family: 'Times New Roman', Times, serif; font-weight: bold;text-align:center">
+            Timetable Management System
+        </a>
+
+        <a class="navbar-brand mx-auto d-lg-none text-center"
+            style="font-size: 18px; color: white; font-family: 'Times New Roman', Times, serif; font-weight: bold;">
+            Timetable Management
+        </a>
+
+        <div class="d-flex align-items-center ms-auto">
+            <form method="POST" action="<?php echo e(route('logout')); ?>" class="mb-0">
+                <?php echo csrf_field(); ?>
+                <button type="submit" class="btn btn-light btn-sm fw-semibold">
+                    <i class="bi bi-box-arrow-right me-1"></i> Logout
+                </button>
+            </form>
+        </div>
+
+    </div>
+</nav>
+
+
+    <div id="sidebar">
+    <div class="sidebar-header">
+        <h4 class="m-0" style="font-size: 1.2rem;">Timetable Pro</h4>
+    </div>
+    <ul class="nav flex-column" id="accordionSidebar"> 
+
+    
+
+    
+   
+<?php if(auth()->guard()->check()): ?>
+   <?php if(auth()->user()->user_level === 'admin'): ?>
+
+    
+    <li class="nav-item">
+        <a href="<?php echo e(url('/dash')); ?>"
+           class="nav-link <?php echo e(Route::currentRouteName() == 'dash' ? 'active' : ''); ?>">
+            <i class="bi bi-speedometer2"></i>
+            <span>Dashboard</span>
+        </a>
+    </li>
+
+    
+    <li class="nav-item">
+    <a href="#departmentCourseSubmenu"
+       class="nav-link accordion-button collapsed
+       <?php echo e(Route::currentRouteName() == 'department.index' ||
+            Route::currentRouteName() == 'course.index'
+            ? 'active' : ''); ?>"
+       data-bs-toggle="collapse"
+       data-bs-target="#departmentCourseSubmenu"
+       aria-expanded="false">
+
+        <i class="bi bi-layers"></i>
+        <span>Department</span>
+        <i class="bi bi-chevron-down chevron-icon ms-auto"></i>
+    </a>
+
+    <ul class="collapse list-unstyled
+        <?php echo e(Route::currentRouteName() == 'department.index' ||
+            Route::currentRouteName() == 'course.index'
+            ? 'show' : ''); ?>"
+        id="departmentCourseSubmenu"
+        data-bs-parent="#accordionSidebar">
+
+        <li class="nav-item">
+            <a href="<?php echo e(route('department.index')); ?>"
+               class="nav-link <?php echo e(Route::currentRouteName() == 'department.index' ? 'active' : ''); ?>">
+                <i class="bi bi-journals"></i>
+                <span>Department Info</span>
+            </a>
+        </li>
+
+        <li class="nav-item">
+            <a href="<?php echo e(route('course.index')); ?>"
+               class="nav-link <?php echo e(Route::currentRouteName() == 'course.index' ? 'active' : ''); ?>">
+                <i class="bi bi-journal-text"></i>
+                <span>Course Info</span>
+            </a>
+        </li>
+
+    </ul>
+</li>
+
+    
+    <li class="nav-item">
+        <a href="<?php echo e(url('/teachers')); ?>"
+           class="nav-link <?php echo e(Route::currentRouteName() == 'teachers.index' ? 'active' : ''); ?>">
+            <i class="bi bi-person-badge"></i>
+            <span>Teachers</span>
+        </a>
+    </li>
+
+    
+    <li class="nav-item">
+    <a href="#classManagementSubmenu"
+       class="nav-link accordion-button collapsed 
+       <?php echo e(Route::currentRouteName() == 'room.index' || 
+            Route::currentRouteName() == 'courseroom.index' 
+            ? 'active' : ''); ?>"
+       data-bs-toggle="collapse"
+       data-bs-target="#classManagementSubmenu"
+       aria-expanded="false">
+
+        <i class="bi bi-door-open"></i>
+        <span>Class Management</span>
+        <i class="bi bi-chevron-down chevron-icon ms-auto"></i>
+    </a>
+
+    <ul class="collapse list-unstyled 
+        <?php echo e(Route::currentRouteName() == 'room.index' || 
+            Route::currentRouteName() == 'courseroom.index' 
+            ? 'show' : ''); ?>"
+        id="classManagementSubmenu"
+        data-bs-parent="#accordionSidebar">
+
+        <li class="nav-item">
+            <a href="<?php echo e(route('room.index')); ?>"
+               class="nav-link <?php echo e(Route::currentRouteName() == 'room.index' ? 'active' : ''); ?>">
+                <i class="bi bi-building"></i>
+                <span>Classrooms</span>
+            </a>
+        </li>
+
+        <li class="nav-item">
+            <a href="<?php echo e(route('courseroom.index')); ?>"
+               class="nav-link <?php echo e(Route::currentRouteName() == 'courseroom.index' ? 'active' : ''); ?>">
+                <i class="bi bi-building"></i>
+                <span>Room Assign</span>
+            </a>
+        </li>
+
+    </ul>
+</li>
+
+    
+    <li class="nav-item">
+        <a href="<?php echo e(url('/subject')); ?>" class="nav-link <?php echo e(Route::currentRouteName() == 'subject.index' ? 'active' : ''); ?>">
+            <i class="bi bi-journal-bookmark"></i>
+            <span>Subjects</span>
+        </a>
+    </li>
+
+    
+    <li class="nav-item">
+        <a href="<?php echo e(url('/semester')); ?>"
+           class="nav-link <?php echo e(Route::currentRouteName() == 'semester.index' ? 'active' : ''); ?>">
+            <i class="bi bi-calendar2-range"></i>
+            <span>Semester</span>
+        </a>
+    </li>
+
+    
+    <li class="nav-item">
+        <a href="<?php echo e(url('/timeslot')); ?>"
+           class="nav-link <?php echo e(Route::currentRouteName() == 'timeslot.index' ? 'active' : ''); ?>">
+            <i class="bi bi-clock"></i>
+            <span>Time Slot</span>
+        </a>
+    </li>
+
+    
+<li class="nav-item">
+    <a href="#timetableInfoSubmenu"
+       class="nav-link accordion-button collapsed
+       <?php echo e(Route::currentRouteName() == 'timetable.generate' ||
+            Route::currentRouteName() == 'timetable.validate'
+            ? 'active' : ''); ?>"
+       data-bs-toggle="collapse"
+       data-bs-target="#timetableInfoSubmenu"
+       aria-expanded="false">
+
+        <i class="bi bi-calendar3"></i>
+        <span>Timetable Info</span>
+        <i class="bi bi-chevron-down chevron-icon ms-auto"></i>
+    </a>
+
+    <ul class="collapse list-unstyled
+        <?php echo e(Route::currentRouteName() == 'timetable.generate' ||
+            Route::currentRouteName() == 'validate'
+            ? 'show' : ''); ?>"
+        id="timetableInfoSubmenu"
+        data-bs-parent="#accordionSidebar">
+
+        <li class="nav-item">
+            <a href="<?php echo e(route('timetable.generate')); ?>"
+               class="nav-link <?php echo e(Route::currentRouteName() == 'timetable.generate' ? 'active' : ''); ?>">
+                <i class="bi bi-calendar-plus"></i>
+                <span>Generate Timetable</span>
+            </a>
+        </li>
+
+        <li class="nav-item">
+            <a href="<?php echo e(url('/timetable/validate')); ?>"
+               class="nav-link <?php echo e(Route::currentRouteName() == 'validate' ? 'active' : ''); ?>">
+                <i class="bi bi-check2-square"></i>
+                <span>View Validation</span>
+            </a>
+        </li>
+
+    </ul>
+</li>
+
+    
+<li class="nav-item">
+    <a href="#reportsSubmenu"
+       class="nav-link accordion-button collapsed
+       <?php echo e(Route::currentRouteName() == 'report1' ||
+            Route::currentRouteName() == 'report' ||
+            Route::currentRouteName() == 'roomusage'
+            ? 'active' : ''); ?>"
+       data-bs-toggle="collapse"
+       data-bs-target="#reportsSubmenu"
+       aria-expanded="false">
+
+        <i class="bi bi-file-earmark-bar-graph"></i>
+        <span>Reports</span>
+        <i class="bi bi-chevron-down chevron-icon ms-auto"></i>
+    </a>
+
+    <ul class="collapse list-unstyled
+        <?php echo e(Route::currentRouteName() == 'report1' ||
+            Route::currentRouteName() == 'report' ||
+            Route::currentRouteName() == 'roomusage'
+            ? 'show' : ''); ?>"
+        id="reportsSubmenu"
+        data-bs-parent="#accordionSidebar">
+
+        <li class="nav-item">
+            <a href="<?php echo e(url('/report1')); ?>"
+               class="nav-link <?php echo e(Route::currentRouteName() == 'report1' ? 'active' : ''); ?>">
+                <i class="bi bi-person-lines-fill"></i>
+                <span>Teacher Subjects</span>
+            </a>
+        </li>
+
+        <li class="nav-item">
+            <a href="<?php echo e(url('/report')); ?>"
+               class="nav-link <?php echo e(Route::currentRouteName() == 'report' ? 'active' : ''); ?>">
+                <i class="bi bi-hourglass-split"></i>
+                <span>Teacher Workload</span>
+            </a>
+        </li>
+
+        <li class="nav-item">
+            <a href="<?php echo e(url('/roomusage')); ?>"
+               class="nav-link <?php echo e(Route::currentRouteName() == 'roomusage' ? 'active' : ''); ?>">
+                <i class="bi bi-building"></i>
+                <span>Room Utilization</span>
+            </a>
+        </li>
+
+    </ul>
+</li>
+
+    
+    <li class="nav-item">
+        <a href="<?php echo e(url('/adminprofile')); ?>"
+           class="nav-link <?php echo e(Route::currentRouteName() == 'adminprofile.index' ? 'active' : ''); ?>">
+            <i class="bi bi-gear"></i>
+            <span>Profile</span>
+        </a>
+    </li>
+
+<?php endif; ?>
+<?php endif; ?>
+
+   <?php if(auth()->guard()->check()): ?>
+    <?php if(auth()->user()->role === 'Supervisor'): ?>
+
+<li class="nav-item">
+    <a href="<?php echo e(route('supdash')); ?>" 
+       class="nav-link <?php echo e(request()->routeIs('supdash') ? 'active' : ''); ?>">
+        <i class="bi bi-speedometer2"></i> Dashboard
+    </a>
+</li>
+
+<li class="nav-item">
+    <a href="<?php echo e(route('cr_info.index')); ?>" 
+       class="nav-link <?php echo e(request()->routeIs('cr_info.index') ? 'active' : ''); ?>">
+        <i class="bi bi-person-plus-fill"></i> Registration
+    </a>
+</li>
+
+<li class="nav-item">
+    <a href="/supervision" 
+       class="nav-link <?php echo e(request()->routeIs('supervision') ? 'active' : ''); ?>">
+        <i class="bi bi-calendar-check"></i> Todays Sessions
+    </a>
+</li>
+
+<li class="nav-item">
+    <a href="/teachersub1" 
+       class="nav-link <?php echo e(request()->routeIs('teachersub1') ? 'active' : ''); ?>">
+        <i class="bi bi-journal-bookmark"></i> Subjects
+    </a>
+</li>
+
+<li class="nav-item">
+    <a href="/teachertbl1" 
+       class="nav-link <?php echo e(request()->routeIs('teachertbl1') ? 'active' : ''); ?>">
+        <i class="bi bi-table"></i> Timetable
+    </a>
+</li>
+
+<li class="nav-item">
+    <a href="/report7" 
+       class="nav-link <?php echo e(request()->routeIs('report7') ? 'active' : ''); ?>">
+        <i class="bi bi-bar-chart-line"></i> Report
+    </a>
+</li>
+
+<li class="nav-item">
+    <a href="/adminprofile" 
+       class="nav-link <?php echo e(Route::currentRouteName() == 'sup' ? 'active' : ''); ?>">
+        <i class="bi bi-gear"></i> Setting
+    </a>
+</li>
+
+<?php endif; ?>
+<?php endif; ?>
+    
+
+    
+    
+    
+
+    
+    </ul>
+
+
+</div>
+
+
+    <?php echo $__env->yieldContent("content"); ?>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            // Toggle sidebar kwa screen ndogo
+            $('#sidebarCollapse').on('click', function() {
+                $('#sidebar').toggleClass('active');
+                $('#content').toggleClass('active');
+            });
+
+            // LOGIC YA KUWEKA STAIILI YA ACTIVE KWENYE ACCORDION ITEM
+            // Inahakikisha kwamba item iliyofunguliwa inaonekana "active"
+            $('.accordion-button').on('click', function() {
+                var targetId = $(this).attr('data-bs-target');
+                var isExpanded = $(this).attr('aria-expanded') === 'true';
+
+                // Ondoa active-accordion kwa accordion zote
+                $('.accordion-button').removeClass('active-accordion');
+
+                // Ongeza active-accordion ikiwa inafunguliwa (haitakiwi)
+                // Au iondoe ikiwa inafungwa
+                if (!isExpanded) {
+                     // Submenu inafungwa, hapo hatufanyi chochote, inarudi kuwa inactive.
+                } else {
+                    // Submenu inafunguliwa, weka active-accordion style
+                    $(this).addClass('active-accordion');
+                }
+
+                 // Logik ya kuweka active-accordion wakati inafunguliwa
+                setTimeout(() => {
+                    if ($(targetId).hasClass('show')) {
+                        $(this).addClass('active-accordion');
+                    } else {
+                        $(this).removeClass('active-accordion');
+                    }
+                }, 300); // Muda mfupi baada ya Bootstrap kumaliza animation
+
+            });
+        });
+    </script>
+</body>
+</html><?php /**PATH C:\Users\PC\Documents\Timetable\resources\views/layout/app.blade.php ENDPATH**/ ?>
