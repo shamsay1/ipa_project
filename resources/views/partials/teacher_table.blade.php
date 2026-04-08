@@ -25,6 +25,8 @@
                 <i class="bi {{ $teacher->status == 'Active' ? 'bi-slash-circle-fill' : 'bi-check-circle-fill' }}"></i>
             </button>
         </form>
+        <a href="{{ route('teacher.subjects',$teacher->id) }}" style="text-decoration: none;">View subjects</a>
+
     </td>
 </tr>
 @empty

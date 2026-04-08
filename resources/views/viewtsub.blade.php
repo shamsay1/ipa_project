@@ -111,40 +111,44 @@
 
            <div class="table-responsive">
    
-        <p><strong>Department:</strong> {{ $teacher->department->deptName }}</p>
+        <p style="text-align: center"><strong>Department:</strong> {{ $teacher->department->deptName }}</p>
         <div>
             <h5 class="mb-0 text-center" style="color: green;font-wweight: bold;font-family: 'Times New Roman', Times, serif">Subjects Taught by Teacher {{ strtoupper($teacher->firstname) }} {{ strtoupper($teacher->lastname) }}</h5>
         </div>
 
-            @if($subjects->isEmpty())
-                <div class="alert alert-warning">No subjects assigned to this teacher.</div>
-            @else
-                <table class="table table-bordered align-middle">
-                    <thead class="table-light">
-                        <tr>
-                            <th>#</th>
-                            <th>Subject Name</th>
-                            <th>Subjct Code</th>
-                            <th>Course</th>
-                            <th>NTA LEVEL</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach($subjects as $index => $subject)
-                            <tr>
-                                <td>{{ $index + 1 }}</td>
-                                <td>{{ $subject->subjectName }}</td>
-                                <td>{{ $subject->subjectCode }}</td>
+           
+              
+                
+                   <table class="table table-bordered text-center">
+    <thead>
+        <tr>
+            <th>S/N</th>
+            <th>Subject Name</th>
+            <th>Courses</th>
+            <th>Subject Code</th>
+        </tr>
+    </thead>
+    <tbody>
+      
+        @foreach($subjects as $index => $sub)
+            <tr>
+                <td>{{ $loop->iteration }}</td>
+                <td style="text-align:left">
+                    {{ strtoupper($sub['subjectName']) }}
+                </td>
+                <td>
+                    {{ implode(' + ', $sub['courses']) }}
+                </td>
 
-                                <td>{{ $subject->courseName }}</td>
-                                <td>{{ $subject->nta_level }}</td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            @endif
+                <td>{{ $sub['subjectCode'] }}</td>
+            </tr>
+        @endforeach
+    </tbody>
+</table>
+            
+          
             <div class="text-end mt-3">
-                <a href="{{ route('teacher.load.report') }}" class="btn btn-secondary">← Back to Report</a>
+                <a href="{{ route('teachers.index') }}" class="btn btn-secondary">← Back</a>
             </div>
 
     

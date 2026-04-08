@@ -193,7 +193,6 @@
                 <th>Teacher's Name</th>
                 <th>Total Subjects</th>
                 <th>Status</th>
-                <th class="nodis">Action</th>
             </tr>
         </thead>
         <tbody>
@@ -211,7 +210,7 @@
                             <span class="badge bg-warning text-dark"><?php echo e($row->status); ?></span>
                         <?php endif; ?>
                     </td>
-                    <td class="nodis"><a href="<?php echo e(route('teacher.load.report',$row->id)); ?>" style="text-decoration: none;">View All</a></td>
+                    
                 </tr>
             <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
         </tbody>

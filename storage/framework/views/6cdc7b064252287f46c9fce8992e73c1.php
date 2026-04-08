@@ -111,40 +111,46 @@
 
            <div class="table-responsive">
    
-        <p><strong>Department:</strong> <?php echo e($teacher->department->deptName); ?></p>
+        <p style="text-align: center"><strong>Department:</strong> <?php echo e($teacher->department->deptName); ?></p>
         <div>
             <h5 class="mb-0 text-center" style="color: green;font-wweight: bold;font-family: 'Times New Roman', Times, serif">Subjects Taught by Teacher <?php echo e(strtoupper($teacher->firstname)); ?> <?php echo e(strtoupper($teacher->lastname)); ?></h5>
         </div>
 
-            <?php if($subjects->isEmpty()): ?>
-                <div class="alert alert-warning">No subjects assigned to this teacher.</div>
-            <?php else: ?>
-                <table class="table table-bordered align-middle">
-                    <thead class="table-light">
-                        <tr>
-                            <th>#</th>
-                            <th>Subject Name</th>
-                            <th>Subjct Code</th>
-                            <th>Course</th>
-                            <th>NTA LEVEL</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php $__currentLoopData = $subjects; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $index => $subject): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                            <tr>
-                                <td><?php echo e($index + 1); ?></td>
-                                <td><?php echo e($subject->subjectName); ?></td>
-                                <td><?php echo e($subject->subjectCode); ?></td>
+           
+              
+                
+                   <table class="table table-bordered text-center">
+    <thead>
+        <tr>
+            <th>S/N</th>
+            <th>Subject Name</th>
+            <th>Courses</th>
+            <th>Subject Code</th>
+        </tr>
+    </thead>
+    <tbody>
+      
+        <?php $__currentLoopData = $subjects; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $index => $sub): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+            <tr>
+                <td><?php echo e($loop->iteration); ?></td>
+                <td style="text-align:left">
+                    <?php echo e(strtoupper($sub['subjectName'])); ?>
 
-                                <td><?php echo e($subject->courseName); ?></td>
-                                <td><?php echo e($subject->nta_level); ?></td>
-                            </tr>
-                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-                    </tbody>
-                </table>
-            <?php endif; ?>
+                </td>
+                <td>
+                    <?php echo e(implode(' + ', $sub['courses'])); ?>
+
+                </td>
+
+                <td><?php echo e($sub['subjectCode']); ?></td>
+            </tr>
+        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+    </tbody>
+</table>
+            
+          
             <div class="text-end mt-3">
-                <a href="<?php echo e(route('teacher.load.report')); ?>" class="btn btn-secondary">← Back to Report</a>
+                <a href="<?php echo e(route('teachers.index')); ?>" class="btn btn-secondary">← Back</a>
             </div>
 
     

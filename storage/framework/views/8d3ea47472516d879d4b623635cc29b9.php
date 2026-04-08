@@ -102,9 +102,9 @@
     <div class="table-container p-3">
         <div class="row mb-4">
             <h3></h3>
-        <h5 style="font-family: 'Times New Roman', Times, serif;text-align: center;font-size: 30px">Teaching Timetable for Teacher <strong style="font-family: 'Times New Roman', Times, serif;text-align: center;color: green;font-size: 25px"><?php echo e(strtoupper($teacher->firstname . ' ' . $teacher->lastname)); ?></strong></h5>
+        <h5 style="font-family: 'Times New Roman', Times, serif;text-align: center;font-size: 24px">Teaching Timetable for Teacher <strong style="font-family: 'Times New Roman', Times, serif;text-align: center;color: green;font-size: 25px"><?php echo e(strtoupper($teacher->firstname . ' ' . $teacher->lastname)); ?></strong></h5>
         <?php if($activeSemester): ?>
-            <p style="font-family: 'Times New Roman', Times, serif;text-align: center;color: green;font-size: 30px"><strong>Semester:</strong> <?php echo e($activeSemester->semName); ?></p>
+            <p style="font-family: 'Times New Roman', Times, serif;text-align: center;color: green;font-size: 24px"><strong>Semester:</strong> <?php echo e($activeSemester->semName); ?></p>
         <?php endif; ?>
         
         <table class="table table-bordered text-center">

@@ -563,29 +563,62 @@ public function TeacherImport(Request $request)
 }
     public function viewtsub($id)
 {
-    
     $teacher = Teacher::findOrFail($id);
 
-    if (!$teacher) {
-        return redirect()->back()->with('error', 'Teacher not found.');
-    }
-    $subjects = DB::table('subjects')
+    $subjectsRaw = DB::table('subjects')
         ->join('courses', 'subjects.course_id', '=', 'courses.id')
         ->join('semesters', 'subjects.semester_id', '=', 'semesters.id')
         ->select(
             'subjects.subjectName',
-            'courses.courseName',
+            'subjects.group_name',
+            'courses.short_name',
             'subjects.nta_level',
             'subjects.subjectCode',
             'semesters.status',
             'semesters.semName'
         )
         ->where('subjects.teacher_id', $id)
-        ->where("semesters.status","Active")
-        ->orderBy('semesters.id', 'asc')
+        ->where('semesters.status', 'Active')
+        ->orderBy('subjects.group_name')
         ->get();
 
-    return view('viewtsub', compact('teacher', 'subjects'));
+    // GROUPING
+    $groupedSubjects = [];
+
+    foreach ($subjectsRaw as $item) {
+
+        // PREFIX ya NTA
+        $prefix = '';
+        switch ($item->nta_level) {
+            case "NTA-4": $prefix = 'BTC'; break;
+            case "NTA-5": $prefix = 'TC'; break;
+            case "NTA-6": $prefix = 'OD'; break;
+            case "NTA-7": $prefix = 'HD'; break;
+            case "NTA-8": $prefix = 'B'; break;
+        }
+
+        $courseName = $prefix . $item->short_name;
+
+        
+        $key = $item->group_name ?? $item->subjectName;
+
+        if (!isset($groupedSubjects[$key])) {
+            $groupedSubjects[$key] = [
+                'subjectName' => $item->group_name ?? $item->subjectName,
+                'courses' => [],
+                'subjectCode' => $item->subjectCode,
+                'nta_level' => $item->nta_level,
+            ];
+        }
+        if (!in_array($courseName, $groupedSubjects[$key]['courses'])) {
+            $groupedSubjects[$key]['courses'][] = $courseName;
+        }
+    }
+
+    return view('viewtsub', [
+        'teacher' => $teacher,
+        'subjects' => $groupedSubjects
+    ]);
 }
 
 public function supervision()

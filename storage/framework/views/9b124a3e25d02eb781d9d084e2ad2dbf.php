@@ -104,15 +104,16 @@
                 <form action="<?php echo e(route('timetable.solveConflicts')); ?>" method="POST">
         <?php echo csrf_field(); ?>
         <button type="submit" class="btn btn-success">
-            Solve Conflicts Automatically
+            Solve Crecit Hours Conflicts
         </button>
     </form>
-     <form action="<?php echo e(route('reduce.evening')); ?>" method="POST">
-    <?php echo csrf_field(); ?>
-    <button type="submit" class="btn btn-primary">
-        Reduce evening session
-    </button>
-</form>
+    <form action="<?php echo e(route('timetable.solveConflicts1')); ?>" method="POST">
+        <?php echo csrf_field(); ?>
+        <button type="submit" class="btn btn-info">
+            Solve Other Conflicts
+        </button>
+    </form>
+     
    <form action="<?php echo e(route('sync.group.subjects')); ?>" method="POST">
 <?php echo csrf_field(); ?>
 

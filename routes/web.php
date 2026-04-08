@@ -71,6 +71,8 @@ Route::middleware(['auth:teacher', 'admin'])->group(function () {
     Route::resource("/courseroom",CourseRoomController::class);
     Route::get("/logs",[LoginController::class,'logs']);
     Route::get("/adminprofile",[TeacherController::class,"adprofile"]);
+    Route::get('/teacher/{id}/subjects', [TeacherController::class, 'viewtsub'])
+    ->name('teacher.subjects');
 
 });
 
@@ -143,6 +145,7 @@ Route::middleware(['auth:teacher'])->group(function () {
     Route::post('/timetable/filter-options', [TimetableGeneratorController::class, 'filterOptions'])->name('timetable.filterOptions');
     Route::post('/timetable/checkSolutions', [TimetableGeneratorController::class, 'checkSolutions'])->name('timetable.checkSolutions');
     Route::post('/timetable/solve-conflicts', [TimetableGeneratorController::class, 'solveConflicts'])->name('timetable.solveConflicts');
+    Route::post('/timetable/solve-conflicts1', [TimetableGeneratorController::class, 'solveConflicts1'])->name('timetable.solveConflicts1');
     Route::get('/timetable/export-all', [TimetableGeneratorController::class, 'exportAll']);
     Route::get('/timetable/download/{type}', [TimetableGeneratorController::class, 'downloadTimetable'])->name('timetable.download');
     Route::get("/viewall",[TimetableGeneratorController::class,"viewInstitutionTimetable"]);

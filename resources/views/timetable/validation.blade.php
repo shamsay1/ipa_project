@@ -104,15 +104,16 @@
                 <form action="{{ route('timetable.solveConflicts') }}" method="POST">
         @csrf
         <button type="submit" class="btn btn-success">
-            Solve Conflicts Automatically
+            Solve Crecit Hours Conflicts
         </button>
     </form>
-     <form action="{{ route('reduce.evening') }}" method="POST">
-    @csrf
-    <button type="submit" class="btn btn-primary">
-        Reduce evening session
-    </button>
-</form>
+    <form action="{{ route('timetable.solveConflicts1') }}" method="POST">
+        @csrf
+        <button type="submit" class="btn btn-info">
+            Solve Other Conflicts
+        </button>
+    </form>
+     
    <form action="{{ route('sync.group.subjects') }}" method="POST">
 @csrf
 

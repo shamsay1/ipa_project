@@ -19,11 +19,13 @@
     }
     .btn1{
         background-color: rgb(41, 190, 103);
-        padding: 5px;
+        padding: 7px;
         margin: 10px 10px 10px 10px;
         color: white;
         border-radius: 4px;
         border: none;
+        cursor: pointer;
+        float: center;
         
          
     }

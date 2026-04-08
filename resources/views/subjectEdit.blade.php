@@ -50,6 +50,7 @@
 
 <div id="content">
     <div class="table-container p-3">
+        <h3 style="text-align: center;font-family: 'Times New Roman', Times, serif;color: green;marging-bottom: 14px;">Update Subject Information: {{ $subject->subjectName }}</h3>
         
         @if(session('success'))
         <div class="alert alert-dismissible fade show flash-message" role="alert">
@@ -138,8 +139,8 @@
                     <input type="text" id="credit_hour" name="credit_hour" class="form-control" value="{{ $subject->credit_hour}}">
                 </div>
                 <div class="col-md-4 mb-3">
-                    <label for="credit_hour" class="form-label">Credit Hours</label>
-                    <input type="text" id="credit_hour" name="group_name" class="form-control" value="{{ $subject->group_name}}">
+                    <label for="credit_hour" class="form-label">Shared Group</label>
+                    <input type="text" id="credit_hour" name="group_name" class="form-control" value="{{ $subject->group_name ? $subject->group_name : 'NONE'}}">
                 </div>
             </div>
 

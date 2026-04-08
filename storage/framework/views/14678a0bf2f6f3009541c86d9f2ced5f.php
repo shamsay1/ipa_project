@@ -25,6 +25,8 @@
                 <i class="bi <?php echo e($teacher->status == 'Active' ? 'bi-slash-circle-fill' : 'bi-check-circle-fill'); ?>"></i>
             </button>
         </form>
+        <a href="<?php echo e(route('teacher.subjects',$teacher->id)); ?>" style="text-decoration: none;">View subjects</a>
+
     </td>
 </tr>
 <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>

@@ -190,7 +190,6 @@
                 <th>Teacher's Name</th>
                 <th>Total Subjects</th>
                 <th>Status</th>
-                <th class="nodis">Action</th>
             </tr>
         </thead>
         <tbody>
@@ -208,7 +207,7 @@
                             <span class="badge bg-warning text-dark">{{ $row->status }}</span>
                         @endif
                     </td>
-                    <td class="nodis"><a href="{{ route('teacher.load.report',$row->id) }}" style="text-decoration: none;">View All</a></td>
+                    {{-- <td class="nodis"><a href="{{ route('teacher.subjects',$row->id) }}" style="text-decoration: none;">View All</a></td> --}}
                 </tr>
             @endforeach
         </tbody>
