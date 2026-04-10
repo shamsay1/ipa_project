@@ -220,7 +220,6 @@
                             <th>Name</th>
                             <th>Code</th>
                             <th>Course</th>
-                            <th>LEVEL</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -229,14 +228,29 @@
                         ?>
                        
                         <?php $__currentLoopData = $subjects; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $i => $subject): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                        <tr>
-                            <td><?php echo e($i + 1); ?></td>
-                            <td><?php echo e($subject->subjectName); ?></td>
-                            <td><?php echo e($subject->subjectCode); ?></td>
-                            <td><?php echo e($subject->courseName); ?></td>
-                            <td><?php echo e($subject->nta_level); ?></td>
-                        </tr>
-                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+<tr>
+    <td><?php echo e($i + 1); ?></td>
+
+    
+    <td>
+        <?php echo e($subject['subjectName']); ?>
+
+
+        <?php if(count($subject['courses']) > 1): ?>
+            <span style="color: green;font-weight: bolder">(Joined)</span>
+        <?php endif; ?>
+    </td>
+
+    
+    <td><?php echo e($subject['subjectCode']); ?></td>
+
+    
+    <td>
+        <?php echo e(implode(' + ', $subject['courses'])); ?>
+
+    </td>
+</tr>
+<?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
 
                      
                         

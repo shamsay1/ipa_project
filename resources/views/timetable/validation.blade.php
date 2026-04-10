@@ -113,6 +113,12 @@
             Solve Other Conflicts
         </button>
     </form>
+    <form action="{{ route('timetable.solveNtaDoubleBooking') }}" method="POST">
+    @csrf
+    <button type="submit" class="btn btn-info">
+        Solve NTA Double Booking Conflicts
+    </button>
+</form>
      
    <form action="{{ route('sync.group.subjects') }}" method="POST">
 @csrf

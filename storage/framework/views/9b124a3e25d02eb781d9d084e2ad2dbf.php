@@ -113,6 +113,12 @@
             Solve Other Conflicts
         </button>
     </form>
+    <form action="<?php echo e(route('timetable.solveNtaDoubleBooking')); ?>" method="POST">
+    <?php echo csrf_field(); ?>
+    <button type="submit" class="btn btn-info">
+        Solve NTA Double Booking Conflicts
+    </button>
+</form>
      
    <form action="<?php echo e(route('sync.group.subjects')); ?>" method="POST">
 <?php echo csrf_field(); ?>

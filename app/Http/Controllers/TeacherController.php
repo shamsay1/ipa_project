@@ -401,28 +401,62 @@ public function TeacherImport(Request $request)
         'endDate'
     ));
 }
-    public function teachersubject(){
-        $teacher = Auth::user();
+    public function teachersubject()
+{
+    $teacher = Auth::user();
 
-    // Masomo anayofundisha mwalimu aliye login
-        $subjects = DB::table('subjects')
+    $subjectsRaw = DB::table('subjects')
         ->join('courses', 'subjects.course_id', '=', 'courses.id')
         ->join('semesters', 'subjects.semester_id', '=', 'semesters.id')
         ->select(
             'subjects.subjectName',
             'subjects.subjectCode',
-            'subjects.subject_type',
-            'subjects.required_lab',
-            'courses.courseName',
-            'semesters.status',
-            'semesters.semName',
+            'subjects.group_name',
+            'courses.short_name',
             'subjects.nta_level'
         )
         ->where('subjects.teacher_id', $teacher->id)
-        ->where("semesters.status","Active")
+        ->where("semesters.status", "Active")
         ->get();
-        return view("teachersubject",compact("subjects"));
+
+    $grouped = [];
+
+    foreach ($subjectsRaw as $item) {
+
+        // PREFIX ya NTA
+        $prefix = '';
+        switch ($item->nta_level) {
+            case "NTA-4": $prefix = 'BTC'; break;
+            case "NTA-5": $prefix = 'TC'; break;
+            case "NTA-6": $prefix = 'OD'; break;
+            case "NTA-7": $prefix = 'HD'; break;
+            case "NTA-8": $prefix = 'B'; break;
+        }
+
+        // COURSE FULL (BTCPA)
+        $fullCourse = $prefix . $item->short_name;
+
+        // KEY
+        $key = $item->group_name ?? $item->subjectName;
+
+        if (!isset($grouped[$key])) {
+            $grouped[$key] = [
+                'subjectName' => $item->group_name ?? $item->subjectName,
+                'subjectCode' => $item->subjectCode,
+                'courses' => []
+            ];
+        }
+
+        // epuka duplicate
+        if (!in_array($fullCourse, $grouped[$key]['courses'])) {
+            $grouped[$key]['courses'][] = $fullCourse;
+        }
     }
+
+    return view("teachersubject", [
+        "subjects" => array_values($grouped)
+    ]);
+}
   public function teacherTimetable()
 {
     $teacher = Auth::user();
@@ -443,48 +477,72 @@ public function TeacherImport(Request $request)
             'subjects.subjectName',
             'subjects.subjectCode',
             'subjects.nta_level',
-            'timetables.group_name',
+            'subjects.group_name', // 👈 muhimu sana
             'courses.short_name',
             'teachers.firstname',
             'teachers.lastname',
-            'teachers.mobile',
             'rooms.name as room_name'
         )
         ->where('subjects.teacher_id', $teacher->id)
         ->where('semesters.status', 'Active')
         ->orderByRaw("FIELD(days.day_name, 'Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday')")
         ->orderBy('timeslots.start_time')
-        ->orderBy('timetables.group_name')
         ->get()
-        ->map(function ($item) {
 
-            // 🔥 Prefix logic
-            $prefix = '';
+        // 🔥 GROUPING (core logic)
+        ->groupBy(function ($item) {
+            return $item->day_name . '|' . 
+                   $item->start_time . '|' . 
+                   $item->end_time . '|' . 
+                   ($item->group_name ?? $item->subjectName);
+        })
 
-            switch ($item->nta_level) {
-                case "NTA-4":
-                    $prefix = 'BTC';
-                    break;
-                case "NTA-5":
-                    $prefix = 'TC';
-                    break;
-                case "NTA-6":
-                    $prefix = 'OD';
-                    break;
-                case "NTA-7":
-                    $prefix = 'HD';
-                    break;
-                case "NTA-8":
-                    $prefix = 'B';
-                    break;
+        ->map(function ($group) {
+
+            $first = $group->first();
+
+            $levels = [];
+            $courses = [];
+
+            foreach ($group as $item) {
+
+                // PREFIX ya NTA
+                $prefix = '';
+                switch ($item->nta_level) {
+                    case "NTA-4": $prefix = 'BTC'; break;
+                    case "NTA-5": $prefix = 'TC'; break;
+                    case "NTA-6": $prefix = 'OD'; break;
+                    case "NTA-7": $prefix = 'HD'; break;
+                    case "NTA-8": $prefix = 'B'; break;
+                }
+
+                // collect NTA
+                if (!in_array($prefix, $levels)) {
+                    $levels[] = $prefix;
+                }
+
+                // collect courses (BTCPA format)
+                $fullCourse = $prefix . $item->short_name;
+
+                if (!in_array($fullCourse, $courses)) {
+                    $courses[] = $fullCourse;
+                }
             }
 
-            // Unda jina jipya la course
-            $item->fullCourseName = $prefix . $item->short_name;
+            // attach combined data
+            $first->combined_levels = implode(' + ', $levels);
+            $first->combined_courses = implode(' + ', $courses);
 
-            return $item;
-        });
+            // jina la ku-display
+            $first->display_name = !empty($first->group_name)
+                ? $first->group_name
+                : $first->subjectName;
 
+            return $first;
+        })
+        ->values();
+
+    // 🔥 TIMESLOTS
     $timeslots = DB::table('timeslots')
         ->orderBy('start_time')
         ->get()
@@ -495,9 +553,16 @@ public function TeacherImport(Request $request)
             ];
         });
 
+    // 🔥 FINAL STRUCTURE
     $timetable = [
         'timeslots' => $timeslots,
-        'entries' => $timetableEntries->groupBy('day_name')
+        'entries' => $timetableEntries
+            ->groupBy('day_name')
+            ->map(function ($dayItems) {
+                return $dayItems->keyBy(function ($item) {
+                    return $item->start_time . '|' . $item->end_time;
+                });
+            })
     ];
 
     return view('teachertbl', compact('timetable'));

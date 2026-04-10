@@ -418,6 +418,7 @@ public function generateTimetable(Request $request)
     
  public function showGenerateForm(Request $request)
 {
+    session(['last_timetable_url' => $request->fullUrl()]);
     $activeSemesters = DB::table('semesters')
         ->where('status', 'Active')
         ->orderBy('id')
@@ -452,28 +453,64 @@ public function generateTimetable(Request $request)
             $q->where('subjects.nta_level', $filterNta);
         })
         ->select(
-            'timetables.id as timetable_id',
-            'days.day_name',
-            'timeslots.start_time',
-            'timeslots.end_time',
-            'subjects.subjectName',
-            'subjects.nta_level',
-            'subjects.credit_hour',
-            'timetables.group_name',
-            'courses.courseName',
-            'courses.short_name',
-            'teachers.firstname',
-            'teachers.lastname',
-            'rooms.name as room_name',
-            'semesters.semName as semester_name',
-            'semesters.id as semester_id'
-        )
+    'timetables.id as timetable_id',
+    'days.day_name',
+    'timeslots.start_time',
+    'timeslots.end_time',
+    'subjects.subjectName',
+    'subjects.nta_level',
+    'subjects.credit_hour',
+    'subjects.group_name as subject_group_name', 
+    'courses.courseName',
+    'courses.short_name',
+    'teachers.firstname',
+    'teachers.lastname',
+    'rooms.name as room_name',
+    'semesters.semName as semester_name',
+    'semesters.id as semester_id'
+)
         ->orderBy('semesters.id') // muhimu sana
         ->orderBy('courses.courseName')
         ->orderBy('subjects.nta_level')
         ->orderByRaw("FIELD(days.day_name,'Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday')")
         ->orderBy('timeslots.start_time')
         ->get();
+      
+$groupedSubjects = DB::table('subjects')
+    ->join('courses', 'subjects.course_id', '=', 'courses.id')
+    ->select(
+        'subjects.group_name',
+        'subjects.nta_level',
+        'courses.short_name'
+    )
+    ->whereNotNull('subjects.group_name')
+    ->get();
+
+
+$groupCourses = [];
+
+foreach ($groupedSubjects as $item) {
+
+    // PREFIX ya NTA
+    $prefix = '';
+    switch ($item->nta_level) {
+        case "NTA-4": $prefix = 'BTC'; break;
+        case "NTA-5": $prefix = 'TC'; break;
+        case "NTA-6": $prefix = 'OD'; break;
+        case "NTA-7": $prefix = 'HD'; break;
+        case "NTA-8": $prefix = 'B'; break;
+    }
+
+    $course = $prefix .$item->short_name;
+
+    if (!isset($groupCourses[$item->group_name])) {
+        $groupCourses[$item->group_name] = [];
+    }
+
+    if (!in_array($course, $groupCourses[$item->group_name])) {
+        $groupCourses[$item->group_name][] = $course;
+    }
+}
 
     $timetableData = [];
 
@@ -541,7 +578,8 @@ public function generateTimetable(Request $request)
         'timetableData',
         'courses',
         'ntaLevels',
-        'activeSemesters'
+        'activeSemesters',
+        'groupCourses'
     ));
 }
 
@@ -705,44 +743,70 @@ public function validateTimetable()
     // 4. NTA DOUBLE BOOKING (SHARED SESSION FIXED)
     // ==========================
     $reports['nta_double_booking'] = DB::select("
-        SELECT c.courseName, d.day_name, ts.start_time, ts.end_time, s.nta_level, COUNT(*) AS total
-        FROM timetables t
-        JOIN timetables t2 
-            ON t.day_id = t2.day_id 
-            AND t.timeslot_id = t2.timeslot_id
-            AND t.id <> t2.id
-        JOIN subjects s ON t.subject_id = s.id
-        JOIN subjects s2 ON t2.subject_id = s2.id
-        JOIN courses c ON s.course_id = c.id
-        JOIN days d ON t.day_id = d.id
-        JOIN timeslots ts ON t.timeslot_id = ts.id
-        WHERE t.semester_id IN ($semesters)
+    SELECT 
+        c.courseName,
+        d.day_name,
+        ts.start_time,
+        ts.end_time,
+        s.nta_level,
+        s.semester_id,
+        COUNT(*) AS total
+    FROM timetables t
+    JOIN timetables t2 
+        ON t.day_id = t2.day_id 
+        AND t.timeslot_id = t2.timeslot_id
+        AND t.id <> t2.id
+
+    JOIN subjects s ON t.subject_id = s.id
+    JOIN subjects s2 ON t2.subject_id = s2.id
+
+    JOIN courses c ON s.course_id = c.id
+    JOIN days d ON t.day_id = d.id
+    JOIN timeslots ts ON t.timeslot_id = ts.id
+
+    WHERE s.semester_id IN ($semesters)
+        AND s2.semester_id IN ($semesters)
+
         AND s.course_id = s2.course_id
         AND s.nta_level = s2.nta_level
-        AND NOT (t.group_name IS NOT NULL AND t.group_name = t2.group_name)
-        GROUP BY c.courseName, d.day_name, ts.start_time, ts.end_time, s.nta_level
-        HAVING COUNT(*) > 1
-    ");
+
+    GROUP BY 
+        c.courseName,
+        d.day_name,
+        ts.start_time,
+        ts.end_time,
+        s.nta_level,
+        s.semester_id
+    HAVING COUNT(*) > 1
+");
 
     // ==========================
     // 5. NTA MORE THAN 10
     // ==========================
 
     $reports['nta_more_than_10'] = DB::select("
-        SELECT 
-            c.courseName,
-            s.course_id,
-            s.nta_level,
-            d.day_name,
-            COUNT(*) as total
-        FROM timetables t
-        JOIN subjects s ON t.subject_id = s.id
-        JOIN courses c ON s.course_id = c.id
-        JOIN days d ON t.day_id = d.id
-        WHERE t.semester_id IN ($semesters)
-        GROUP BY c.courseName, s.course_id, s.nta_level, d.day_name
-        HAVING COUNT(*) > 10
-    ");
+    SELECT 
+        c.courseName,
+        s.course_id,
+        s.nta_level,
+        s.semester_id,
+        d.day_name,
+        COUNT(*) as total
+    FROM timetables t
+    JOIN subjects s ON t.subject_id = s.id
+    JOIN courses c ON s.course_id = c.id
+    JOIN days d ON t.day_id = d.id
+    WHERE s.semester_id IN ($semesters)
+
+    GROUP BY 
+        c.courseName, 
+        s.course_id, 
+        s.nta_level, 
+        s.semester_id,
+        d.day_name
+
+    HAVING COUNT(*) > 10
+");
 
     // ==========================
     // 6. SUBJECT CREDIT HOURS
@@ -821,6 +885,8 @@ public function validateTimetable()
             AND TIME(ts.start_time) = '12:00:00'
     ");
 
+    
+
     // ==========================
     // CALCULATE SCORE
     // ==========================
@@ -837,6 +903,182 @@ public function validateTimetable()
         : 100;
 
     return view('timetable.validation', compact('reports','score','total_entries','violations'));
+}
+
+public function solveNtaDoubleBooking()
+{
+    $activeSemesters = DB::table('semesters')
+        ->where('status','Active')
+        ->pluck('id');
+
+    $allTimeslots = DB::table('timeslots')
+        ->orderBy('start_time')
+        ->get()
+        ->values();
+
+    $conflicts = DB::table('timetables as t')
+        ->join('timetables as t2', function($join){
+            $join->on('t.day_id','=','t2.day_id')
+                 ->on('t.timeslot_id','=','t2.timeslot_id')
+                 ->on('t.semester_id','=','t2.semester_id')
+                 ->whereColumn('t.id','<>','t2.id');
+        })
+        ->join('subjects as s','t.subject_id','=','s.id')
+        ->join('subjects as s2','t2.subject_id','=','s2.id')
+        ->whereIn('t.semester_id', $activeSemesters)
+        ->whereColumn('s.course_id','s2.course_id')
+        ->whereColumn('s.nta_level','s2.nta_level')
+        ->select(
+            't.id as t1_id','t.group_name as g1',
+            't2.id as t2_id','t2.group_name as g2'
+        )
+        ->get();
+
+    foreach ($conflicts as $conflict) {
+
+        // ❗ CHAGUA TU RECORD ISIYO NA GROUP
+        if (is_null($conflict->g1)) {
+            $moveId = $conflict->t1_id;
+        } elseif (is_null($conflict->g2)) {
+            $moveId = $conflict->t2_id;
+        } else {
+            continue; // zote zina group → skip
+        }
+
+        $record = DB::table('timetables')->where('id',$moveId)->first();
+        if (!$record) continue;
+
+        // ❗ DOUBLE CHECK (SAFETY)
+        if ($record->group_name !== null) continue;
+
+        $subject = DB::table('subjects')->where('id',$record->subject_id)->first();
+        if (!$subject) continue;
+
+        $subjectDays = DB::table('timetables')
+            ->where('subject_id',$subject->id)
+            ->where('semester_id',$record->semester_id)
+            ->get()
+            ->groupBy('day_id');
+
+        $moved = false;
+
+        // ===== TRY SAME DAY (CONSECUTIVE) =====
+        foreach ($subjectDays as $dayId => $lessons) {
+
+            if (count($lessons) >= 2) continue;
+
+            foreach ($lessons as $lesson) {
+
+                $currentIndex = $allTimeslots->search(function($t) use ($lesson){
+                    return $t->id == $lesson->timeslot_id;
+                });
+
+                if ($currentIndex === false) continue;
+
+                $candidateSlots = [];
+
+                if (isset($allTimeslots[$currentIndex - 1])) {
+                    $candidateSlots[] = $allTimeslots[$currentIndex - 1]->id;
+                }
+                if (isset($allTimeslots[$currentIndex + 1])) {
+                    $candidateSlots[] = $allTimeslots[$currentIndex + 1]->id;
+                }
+
+                foreach ($candidateSlots as $slotId) {
+
+                    $validSlot = DB::table('timeslots')
+                        ->where('id',$slotId)
+                        ->exists();
+
+                    if (!$validSlot) continue;
+
+                    $exists = DB::table('timetables as t')
+                        ->join('subjects as s','t.subject_id','=','s.id')
+                        ->where('t.day_id',$dayId)
+                        ->where('t.timeslot_id',$slotId)
+                        ->where('t.semester_id',$record->semester_id)
+                        ->where(function($q) use ($subject, $record){
+                            $q->where(function($q2) use ($subject){
+                                $q2->where('s.course_id',$subject->course_id)
+                                   ->where('s.nta_level',$subject->nta_level);
+                            })
+                            ->orWhere(function($q2) use ($record){
+                                $q2->where('t.room_id',$record->room_id);
+                            })
+                            ->orWhere(function($q2) use ($subject){
+                                $q2->where('s.teacher_id',$subject->teacher_id);
+                            });
+                        })
+                        ->exists();
+
+                    if ($exists) continue;
+
+                    DB::table('timetables')
+                        ->where('id',$record->id)
+                        ->update([
+                            'day_id'=>$dayId,
+                            'timeslot_id'=>$slotId
+                        ]);
+
+                    $moved = true;
+                    break 3;
+                }
+            }
+        }
+
+        if ($moved) continue;
+
+        // ===== FALLBACK =====
+        $slots = DB::table('timeslots as ts')
+            ->crossJoin('days as d')
+            ->select('ts.id as timeslot_id','d.id as day_id')
+            ->orderBy('d.id')
+            ->orderBy('ts.start_time')
+            ->get();
+
+        foreach ($slots as $slot) {
+
+            $count = DB::table('timetables')
+                ->where('day_id',$slot->day_id)
+                ->where('subject_id',$record->subject_id)
+                ->where('semester_id',$record->semester_id)
+                ->count();
+
+            if ($count >= 2) continue;
+
+            $exists = DB::table('timetables as t')
+                ->join('subjects as s','t.subject_id','=','s.id')
+                ->where('t.day_id',$slot->day_id)
+                ->where('t.timeslot_id',$slot->timeslot_id)
+                ->where('t.semester_id',$record->semester_id)
+                ->where(function($q) use ($subject, $record){
+                    $q->where(function($q2) use ($subject){
+                        $q2->where('s.course_id',$subject->course_id)
+                           ->where('s.nta_level',$subject->nta_level);
+                    })
+                    ->orWhere(function($q2) use ($record){
+                        $q2->where('t.room_id',$record->room_id);
+                    })
+                    ->orWhere(function($q2) use ($subject){
+                        $q2->where('s.teacher_id',$subject->teacher_id);
+                    });
+                })
+                ->exists();
+
+            if ($exists) continue;
+
+            DB::table('timetables')
+                ->where('id',$record->id)
+                ->update([
+                    'day_id'=>$slot->day_id,
+                    'timeslot_id'=>$slot->timeslot_id
+                ]);
+
+            break;
+        }
+    }
+
+    return back()->with('success','Solved (group protected) ✅');
 }
 public function showedit($id){
     $timetable=Timetable::findOrFail($id);
@@ -856,7 +1098,9 @@ public function update(Request $request,$id){
     ]);
     $timetable = Timetable::findOrFail($id);
     $timetable->update($request->all());
-    return redirect()->route("timetable.generate");
+    $redirectUrl = session('last_timetable_url', route('timetable.generate'));
+
+    return redirect($redirectUrl)->with("success", "Timetable updated success");
     
 }
 public function checkConflicts(Request $request)
@@ -870,7 +1114,7 @@ public function checkConflicts(Request $request)
     $conflicts = [];
 
     // ==========================
-    // GET SUBJECT (WITH SEMESTER)
+    // GET SUBJECT (Hapa tunapata semester_id ya subject husika)
     // ==========================
     $subject = DB::table('subjects')->where('id', $subjectId)->first();
 
@@ -878,7 +1122,8 @@ public function checkConflicts(Request $request)
         return response()->json(['conflicts' => ['Subject not found.']]);
     }
 
-    $semesterId = $subject->semester_id; // 🔥 muhimu sana
+    // Hii ndio semester_id tunayotaka kuitumia (Kutoka kwenye Table ya Subjects)
+    $subSemesterId = $subject->semester_id; 
 
     $room = DB::table('rooms')->where('id', $roomId)->first();
     if (!$room) {
@@ -892,7 +1137,6 @@ public function checkConflicts(Request $request)
     /* |------------------------------------------------------------------
     | ROOM – SUBJECT TYPE VALIDATION
     |------------------------------------------------------------------ */
-
     $subjectType = strtolower(trim($subject->subject_type));
     $roomType    = strtolower(trim($room->type));
     $requiredLab = strtolower(trim($subject->required_lab));
@@ -910,27 +1154,24 @@ public function checkConflicts(Request $request)
     }
 
     /* |------------------------------------------------------------------
-    | SUBJECT SAME DAY
+    | SUBJECT SAME DAY (Angalia ndani ya semester ya somo hili pekee)
     |------------------------------------------------------------------ */
-
-    $subjectConflict = DB::table('timetables')
-        ->where('semester_id', $semesterId) // 🔥 FIX
-        ->where('subject_id', $subjectId)
-        ->where('day_id', $dayId)
-        ->where('id', '!=', $timetableId)
-        ->where('group_name', $groupName)
+    $subjectConflict = DB::table('timetables AS t')
+        ->join('subjects AS s', 't.subject_id', '=', 's.id')
+        ->where('s.semester_id', $subSemesterId) // Tofautisha kwa semester ya somo
+        ->where('t.subject_id', $subjectId)
+        ->where('t.day_id', $dayId)
+        ->where('t.id', '!=', $timetableId)
         ->count();
 
     if ($subjectConflict > 1) {
-        $conflicts[] = "This subject is already scheduled today for this group.";
+        $conflicts[] = "This subject is already scheduled today.";
     }
 
     /* |------------------------------------------------------------------
-    | ROOM DOUBLE BOOKING
+    | ROOM DOUBLE BOOKING (Vyumba haviangalii semester - Chumba kimoja hakiwezi kuwa na vipindi viwili)
     |------------------------------------------------------------------ */
-
     $roomConflict = DB::table('timetables')
-        ->where('semester_id', $semesterId) // 🔥 FIX
         ->where('room_id', $roomId)
         ->where('day_id', $dayId)
         ->where('timeslot_id', $timeslotId)
@@ -938,16 +1179,14 @@ public function checkConflicts(Request $request)
         ->count();
 
     if ($roomConflict > 0) {
-        $conflicts[] = "This room is already in use at this time.";
+        $conflicts[] = "This room is already in use at this time by another group/semester.";
     }
 
     /* |------------------------------------------------------------------
-    | TEACHER DOUBLE BOOKING
+    | TEACHER DOUBLE BOOKING (Walimu hawaangalii semester - Mwalimu hawezi kuwa kote kote)
     |------------------------------------------------------------------ */
-
     $teacherConflict = DB::table('timetables AS t')
         ->join('subjects AS s', 't.subject_id', '=', 's.id')
-        ->where('t.semester_id', $semesterId) // 🔥 FIX
         ->where('s.teacher_id', $subject->teacher_id)
         ->where('t.day_id', $dayId)
         ->where('t.timeslot_id', $timeslotId)
@@ -955,59 +1194,50 @@ public function checkConflicts(Request $request)
         ->count();
 
     if ($teacherConflict > 0) {
-        $conflicts[] = "Teacher is already teaching at this time.";
+        $conflicts[] = "Teacher is already teaching another session at this time.";
     }
 
     /* |------------------------------------------------------------------
-    | NTA DOUBLE BOOKING (WITH SEMESTER)
+    | NTA DOUBLE BOOKING (Hapa ndipo tunatofautisha ICT NTA-4 Sem 1 na Sem 2)
     |------------------------------------------------------------------ */
-
     $ntaConflict = DB::table('timetables AS t')
         ->join('subjects AS s', 't.subject_id', '=', 's.id')
-        ->where('t.semester_id', $semesterId) // 🔥 muhimu sana
         ->where('s.course_id', $subject->course_id)
         ->where('s.nta_level', $subject->nta_level)
-        ->where('s.semester_id', $semesterId) // 🔥 FIX
+        ->where('s.semester_id', $subSemesterId) // MUHIMU: Inatenga migongano kwa semester ya somo
         ->where('t.day_id', $dayId)
         ->where('t.timeslot_id', $timeslotId)
-        ->where('t.group_name', $groupName)
         ->where('t.id', '!=', $timetableId)
         ->count();
 
     if ($ntaConflict > 0) {
-        $conflicts[] = "This NTA group already has a class at this time.";
+        $conflicts[] = "This NTA group (Semester {$subSemesterId}) already has a class at this time.";
     }
 
     /* |------------------------------------------------------------------
-    | NTA DAILY LIMIT
+    | NTA DAILY LIMIT (Kila semester ya NTA level ina limit yake)
     |------------------------------------------------------------------ */
-
     $ntaLessons = DB::table('timetables AS t')
         ->join('subjects AS s', 't.subject_id', '=', 's.id')
-        ->where('t.semester_id', $semesterId) // 🔥 FIX
         ->where('s.course_id', $subject->course_id)
         ->where('s.nta_level', $subject->nta_level)
-        ->where('s.semester_id', $semesterId) // 🔥 FIX
+        ->where('s.semester_id', $subSemesterId) // MUHIMU
         ->where('t.day_id', $dayId)
-        ->where('t.group_name', $groupName)
         ->count();
 
     if ($ntaLessons >= 10) {
-        $conflicts[] = "This NTA group has exceeded 10 classes today.";
+        $conflicts[] = "This NTA group (Semester {$subSemesterId}) has reached its daily limit.";
     }
 
     /* |------------------------------------------------------------------
-    | CREDIT HOURS
+    | CREDIT HOURS (Kuhakiki masaa ya somo ndani ya semester yake)
     |------------------------------------------------------------------ */
-
     $subjectLessons = DB::table('timetables')
-        ->where('semester_id', $semesterId) // 🔥 FIX
         ->where('subject_id', $subjectId)
-        ->where('group_name', $groupName)
         ->count();
 
     if ($subjectLessons > $subject->credit_hour) {
-        $conflicts[] = "This subject has exceeded its credit hours for this group.";
+        $conflicts[] = "This subject has reached/exceeded its credit hours ({$subject->credit_hour}).";
     }
 
     return response()->json([
@@ -1148,16 +1378,13 @@ public function downloadTimetable($type)
 
 public function viewTeacherTimetable($id)
 {
-    // ✅ 1) Check teacher
+    
     $teacher = DB::table('teachers')->where('id', $id)->first();
     if (!$teacher) {
         return redirect()->back()->with('error', 'Teacher not found');
     }
-
-    // ✅ 2) Active semester
     $activeSemester = DB::table('semesters')->where('status', 'Active')->first();
 
-    // ✅ 3) Fetch timetable entries + group
     $entries = DB::table('timetables')
         ->join('subjects', 'timetables.subject_id', '=', 'subjects.id')
         ->join('courses', 'subjects.course_id', '=', 'courses.id')
@@ -1173,15 +1400,13 @@ public function viewTeacherTimetable($id)
             'subjects.subjectName',
             'courses.courseName',
             'subjects.nta_level',
-            'timetables.group_name',   // ✅ used in display
+            'timetables.group_name',   
             'rooms.name as room_name'
         )
         ->orderBy('days.id')
         ->orderBy('timeslots.start_time')
         ->orderBy('timetables.group_name')
         ->get();
-
-    // ✅ Group by day only (not group)
     $groupedEntries = $entries->groupBy('day_name');
 
     return view('viewttimetable', compact('teacher', 'groupedEntries', 'activeSemester'));

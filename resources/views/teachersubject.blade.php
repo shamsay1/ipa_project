@@ -220,7 +220,6 @@
                             <th>Name</th>
                             <th>Code</th>
                             <th>Course</th>
-                            <th>LEVEL</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -229,14 +228,27 @@
                         @endphp
                        
                         @foreach ($subjects as $i => $subject)
-                        <tr>
-                            <td>{{ $i + 1 }}</td>
-                            <td>{{ $subject->subjectName }}</td>
-                            <td>{{ $subject->subjectCode }}</td>
-                            <td>{{ $subject->courseName }}</td>
-                            <td>{{ $subject->nta_level }}</td>
-                        </tr>
-                        @endforeach
+<tr>
+    <td>{{ $i + 1 }}</td>
+
+    {{-- SUBJECT --}}
+    <td>
+        {{ $subject['subjectName'] }}
+
+        @if(count($subject['courses']) > 1)
+            <span style="color: green;font-weight: bolder">(Joined)</span>
+        @endif
+    </td>
+
+    {{-- CODE --}}
+    <td>{{ $subject['subjectCode'] }}</td>
+
+    {{-- COURSE (BTCPA format) --}}
+    <td>
+        {{ implode(' + ', $subject['courses']) }}
+    </td>
+</tr>
+@endforeach
 
                      
                         

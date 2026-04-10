@@ -118,14 +118,7 @@
         </button>
     </form>
 
-    <div class="mb-3">
-    <a href="<?php echo e(route('timetable.download', 'Degree')); ?>" class="btn btn-success">
-        Download Degree Timetable
-    </a>
-    <a href="<?php echo e(route('timetable.download', 'Diploma')); ?>" class="btn btn-primary">
-        Download Diploma Timetable
-    </a>
-</div>
+    
 
 </div>
 
@@ -315,9 +308,21 @@ style="writing-mode: vertical-lr;text-align:center;font-weight:bold;">
 
 
 
-<td><?php echo e($entry->subjectName); ?></td>
+<td>
+    <?php echo e($entry->subjectName); ?>
 
 
+    <?php if(!empty($entry->subject_group_name)): ?>
+        <?php
+            $courses = $groupCourses[$entry->subject_group_name] ?? [];
+        ?>
+
+        <span class="badge bg-info text-dark">
+            Joined: <?php echo e(implode(' + ', $courses)); ?>
+
+        </span>
+    <?php endif; ?>
+</td>
 
 <td><?php echo e($entry->firstname); ?> <?php echo e($entry->lastname); ?></td>
 

@@ -135,6 +135,8 @@ Route::middleware(['auth:teacher'])->group(function () {
     |--------------------------------------------------------------------------
     */
 
+    Route::post('/solve-nta-double-booking', [TimetableGeneratorController::class, 'solveNtaDoubleBooking'])
+    ->name('timetable.solveNtaDoubleBooking');
     Route::get('/timetable/generate', [TimetableGeneratorController::class, 'showGenerateForm'])->name('timetable.generate');
     Route::post('/generate-timetable', [TimetableGeneratorController::class, 'generateTimetable'])->name('generate.timetable');
     Route::get('/timetable/simple', [TimetableGeneratorController::class, 'viewSimpleTimetable'])->name('timetable.simple');

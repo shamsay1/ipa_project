@@ -262,21 +262,22 @@
                                                 <td><?php echo e(strtoupper($day)); ?></td>
                                                 <?php $__currentLoopData = $timetable['timeslots']; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $slot): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                                                     <td>
-                                                        <?php
-                                                            $found = $dayEntries
-                                                                ->where('start_time', $slot['start'])
-                                                                ->where('end_time', $slot['end'])
-                                                                ->first();
-                                                        ?>
+                                                       <?php
+$key = $slot['start'].'|'.$slot['end'];
+$found = $dayEntries[$key] ?? null;
+?>
                                                         <?php if($found): ?>
-                                                            <strong><?php echo e($found->subjectName); ?> (<?php echo e($found->subjectCode); ?>)</strong><br>
-                                                            <?php echo e($found->fullCourseName); ?> (<?php echo e($found->nta_level); ?>)<br>
-                                                            <?php if($found->group_name): ?>
-                                                                GROUP <?php echo e(strtoupper($found->group_name)); ?><br>
-                                                            <?php endif; ?>
-                                                            <?php echo e($found->room_name); ?>
 
-                                                        <?php endif; ?>
+<strong><?php echo e(strtoupper($found->display_name)); ?> (<?php echo e($found->subjectCode); ?>)</strong><br>
+
+<?php echo e($found->combined_courses); ?><br>
+
+
+
+<?php echo e($found->room_name); ?>
+
+
+<?php endif; ?>
                                                     </td>
                                                 <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                                             </tr>
@@ -302,18 +303,12 @@
     
     </div>
 
-    <script>
+   <script>
 function printTimetable(button) {
 
     const timetableData = JSON.parse(button.getAttribute("data-timetable"));
-    const courseName = button.getAttribute("data-course");
-    const ntaLevel = button.getAttribute("data-nta");
-    const groupName = button.getAttribute("data-group");
-    const semester = button.getAttribute("data-semester");
-    const active = button.getAttribute("data-active");
     const teacherName = button.getAttribute("data-teacher");
 
-    // ===== Get & sort unique timeslots =====
     let timeslots = [];
 
     for (let day in timetableData) {
@@ -331,7 +326,6 @@ function printTimetable(button) {
 
     const days = Object.keys(timetableData);
 
-    // ===== Open Print Window =====
     const printWindow = window.open('', '', 'width=1200,height=900');
 
     printWindow.document.write(`
@@ -339,82 +333,49 @@ function printTimetable(button) {
         <head>
             <title>My Timetable</title>
             <style>
-                @page { margin: 0; }
-
                 body {
                     margin: 40px;
-                    background: white;
-                    font-family: 'Times New Roman', Times, serif;
-                    color: black;
+                    font-family: 'Times New Roman';
                 }
-
-                h2, h4, h5 {
-                    text-align: center;
-                    margin: 2px 0;
-                    line-height: 1.4;
-                }
-
                 table {
                     width: 100%;
                     border-collapse: collapse;
-                    font-size: 13px;
-                    margin-top: 25px;
+                    margin-top: 20px;
                 }
-
                 th, td {
                     border: 1px solid #000;
                     padding: 5px;
                     text-align: center;
-                    vertical-align: middle;
                 }
-
                 th {
-                    background-color: #e9ecef;
-                    text-transform: uppercase;
-                    font-weight: bold;
-                }
-
-                td:first-child {
-                    font-weight: bold;
-                    background-color: #f2f2f2;
-                    text-transform: uppercase;
-                }
-
-                tr:nth-child(even) {
-                    background: #f8f9fa;
+                    background: #eee;
                 }
             </style>
         </head>
 
         <body onload="window.print(); window.close();">
 
-            <h2>THE INSTITUTE OF PUBLIC AND ADMINISTRATION</h2>
-            
-            <h5>TIMETABLE FOR TEACHER: ${teacherName.toUpperCase()}</h5>
+            <h2 style="text-align:center;">TIMETABLE</h2>
+            <h4 style="text-align:center;">${teacherName}</h4>
 
             <table>
                 <thead>
                     <tr>
                         <th>DAY / TIME</th>
                         ${timeslots.map((slot,index) => `
-<th style="font-size:11px;line-height:1.2">
-
-<div style="font-weight:bold;text-align: center;font-size: 20px;">
-${index+1}
-</div>
-
-<div>
-${slot}
-</div>
-
-</th>
-`).join('')}
+                            <th>
+                                ${index+1}<br>
+                                ${slot}
+                            </th>
+                        `).join('')}
                     </tr>
                 </thead>
+
                 <tbody>
                     ${days.map(day => `
                         <tr>
                             <td>${day.toUpperCase()}</td>
+
                             ${timeslots.map(slot => {
 
                                 const entry = timetableData[day].find(e =>
@@ -424,9 +385,9 @@ ${slot}
                                 if (entry) {
                                     return `
                                         <td>
-                                            <strong>${entry.subjectName} (${entry.subjectCode})</strong><br>
-                                            ${entry.fullCourseName} (NTA ${entry.nta_level})<br>
-                                            ${entry.group_name ? 'GROUP ' + entry.group_name.toUpperCase() + '<br>' : ''}
+                                            <strong>${entry.display_name.toUpperCase()} (${entry.subjectCode})</strong><br>
+                                            ${entry.combined_courses}<br>
+                                            <b>${entry.combined_levels}</b><br>
                                             ${entry.room_name}
                                         </td>
                                     `;
@@ -435,6 +396,7 @@ ${slot}
                                 }
 
                             }).join('')}
+
                         </tr>
                     `).join('')}
                 </tbody>

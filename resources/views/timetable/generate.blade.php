@@ -118,14 +118,14 @@
         </button>
     </form>
 
-    <div class="mb-3">
+    {{-- <div class="mb-3">
     <a href="{{ route('timetable.download', 'Degree') }}" class="btn btn-success">
         Download Degree Timetable
     </a>
     <a href="{{ route('timetable.download', 'Diploma') }}" class="btn btn-primary">
         Download Diploma Timetable
     </a>
-</div>
+</div> --}}
 
 </div>
 
@@ -307,9 +307,19 @@ style="writing-mode: vertical-lr;text-align:center;font-weight:bold;">
 
 
 {{-- SUBJECT --}}
-<td>{{ $entry->subjectName }}</td>
+<td>
+    {{ $entry->subjectName }}
 
+    @if(!empty($entry->subject_group_name))
+        @php
+            $courses = $groupCourses[$entry->subject_group_name] ?? [];
+        @endphp
 
+        <span class="badge bg-info text-dark">
+            Joined: {{ implode(' + ', $courses) }}
+        </span>
+    @endif
+</td>
 {{-- TEACHER --}}
 <td>{{ $entry->firstname }} {{ $entry->lastname }}</td>
 
