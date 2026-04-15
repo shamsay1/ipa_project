@@ -141,15 +141,29 @@
 <form action="{{ route('timetable.generate') }}" method="GET">
   <div class="row">
     <div class="col-md-3">
-      <select name="course" class="form-select">
-        <option value="">-- Select Course --</option>
-        @foreach($courses as $course)
-          <option value="{{ $course->id }}" {{ request('course') == $course->id ? 'selected' : '' }}>
-            {{ $course->courseName }}
-          </option>
-        @endforeach
-      </select>
-    </div>
+  <select name="course" class="form-select">
+    <option value="">-- Select Course --</option>
+
+    <!-- Diploma Courses -->
+    <optgroup label="Diploma Courses">
+      @foreach($courses->where('course_level', 'Diploma') as $course)
+        <option value="{{ $course->id }}" {{ request('course') == $course->id ? 'selected' : '' }}>
+          {{ $course->courseName }}
+        </option>
+      @endforeach
+    </optgroup>
+
+    <!-- Degree Courses -->
+    <optgroup label="Degree Courses">
+      @foreach($courses->where('course_level', 'Degree') as $course)
+        <option value="{{ $course->id }}" {{ request('course') == $course->id ? 'selected' : '' }}>
+          {{ $course->courseName }}
+        </option>
+      @endforeach
+    </optgroup>
+
+  </select>
+</div>
 
     <div class="col-md-3">
       <select name="nta" class="form-select">

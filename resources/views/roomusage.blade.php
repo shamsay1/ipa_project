@@ -135,7 +135,7 @@
     <h4 style="text-align:center;font-family:'Times New Roman'">INSTITUTE OF PUBLIC AND ADMINISTRATION</h4>
     <h4 style="text-align:center;color:green;font-family: 'Times New Roman', Times, serif">
         Room Usage ({{ $report['selectedRoom']->name }})  
-        — Active Semester: {{ $activeSemester->semName ?? 'None' }}
+        
     </h4>
 
     <table class="table table-bordered text-center">

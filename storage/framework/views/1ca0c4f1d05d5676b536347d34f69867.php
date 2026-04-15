@@ -134,16 +134,31 @@
 <form action="<?php echo e(route('timetable.generate')); ?>" method="GET">
   <div class="row">
     <div class="col-md-3">
-      <select name="course" class="form-select">
-        <option value="">-- Select Course --</option>
-        <?php $__currentLoopData = $courses; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $course): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-          <option value="<?php echo e($course->id); ?>" <?php echo e(request('course') == $course->id ? 'selected' : ''); ?>>
-            <?php echo e($course->courseName); ?>
+  <select name="course" class="form-select">
+    <option value="">-- Select Course --</option>
 
-          </option>
-        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-      </select>
-    </div>
+    <!-- Diploma Courses -->
+    <optgroup label="Diploma Courses">
+      <?php $__currentLoopData = $courses->where('course_level', 'Diploma'); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $course): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+        <option value="<?php echo e($course->id); ?>" <?php echo e(request('course') == $course->id ? 'selected' : ''); ?>>
+          <?php echo e($course->courseName); ?>
+
+        </option>
+      <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+    </optgroup>
+
+    <!-- Degree Courses -->
+    <optgroup label="Degree Courses">
+      <?php $__currentLoopData = $courses->where('course_level', 'Degree'); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $course): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+        <option value="<?php echo e($course->id); ?>" <?php echo e(request('course') == $course->id ? 'selected' : ''); ?>>
+          <?php echo e($course->courseName); ?>
+
+        </option>
+      <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+    </optgroup>
+
+  </select>
+</div>
 
     <div class="col-md-3">
       <select name="nta" class="form-select">

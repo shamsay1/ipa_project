@@ -40,8 +40,7 @@ Route::post('/teacher-attendance/store',
         [CrInfoController::class,'store1'])
         ->name('teacher.attendance.store');
 
-Route::get('/users', [ApiController::class, 'index'])->name('users.index');
-Route::get('/users/{id}', [ApiController::class, 'show'])->name('users.show');
+
 
 Route::get("/", [LoginController::class,"ShowLogin"])->name("again");
 Route::get('/login', [LoginController::class, 'ShowLogin'])->name('login');
@@ -134,6 +133,8 @@ Route::middleware(['auth:teacher'])->group(function () {
     | TIMETABLE
     |--------------------------------------------------------------------------
     */
+    Route::post('/available-rooms', [TimetableGeneratorController::class, 'availableRooms'])
+    ->name('timetable.availableRooms');
 
     Route::post('/solve-nta-double-booking', [TimetableGeneratorController::class, 'solveNtaDoubleBooking'])
     ->name('timetable.solveNtaDoubleBooking');

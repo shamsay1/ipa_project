@@ -101,11 +101,9 @@
 <div id="content">
     <div class="table-container p-3">
         <div class="row mb-4">
-            <h3></h3>
-        <h5 style="font-family: 'Times New Roman', Times, serif;text-align: center;font-size: 24px">Teaching Timetable for Teacher <strong style="font-family: 'Times New Roman', Times, serif;text-align: center;color: green;font-size: 25px">{{ strtoupper($teacher->firstname . ' ' . $teacher->lastname) }}</strong></h5>
-        @if($activeSemester)
-            <p style="font-family: 'Times New Roman', Times, serif;text-align: center;color: green;font-size: 24px"><strong>Semester:</strong> {{ $activeSemester->semName }}</p>
-        @endif
+            <h3 style="text-align: center;font-family: 'Times New Roman', Times, serif">THE INSTITUTES OF PUBLIC AND ADMINISTRATION(IPA)</h3>
+        <h5 style="font-family: 'Times New Roman', Times, serif;text-align: center;font-size: 24px">Teaching Timetable for Teacher <span style="font-family: 'Times New Roman', Times, serif;text-align: center;color: green;font-size: 25px">{{ strtoupper($teacher->firstname . ' ' . $teacher->middlename. ' ' . $teacher->lastname) }}</span></h5>
+        
         
         <table class="table table-bordered text-center">
     <thead>
@@ -123,27 +121,25 @@
     @foreach($entries as $key => $entry)
         <tr>
 
+            {{-- DAY --}}
             @if($key === 0)
                 <td rowspan="{{ count($entries) }}" 
-                    class="align-middle" 
-                    style="writing-mode: vertical-lr; text-align:center; font-weight:bolder">
-                    <strong>{{ $day }}</strong>
+                    class="align-middle"
+                    style="writing-mode: vertical-lr; font-weight:bold;">
+                    {{ $day }}
                 </td>
             @endif
 
             {{-- TIME --}}
-            <td>{{ date('H:i', strtotime($entry->start_time)) }} - {{ date('H:i', strtotime($entry->end_time)) }}</td>
+            <td>
+                {{ date('H:i', strtotime($entry->start_time)) }} -
+                {{ date('H:i', strtotime($entry->end_time)) }}
+            </td>
 
             {{-- SUBJECT --}}
-            <td>{{ $entry->subjectName }}</td>
-
-            {{-- COURSE + NTA + GROUP --}}
-            <td>
-                {{ $entry->courseName . ' : ' . $entry->nta_level }}
-                @if($entry->group_name)
-                    {{ ' GROUP ' . strtoupper($entry->group_name) }}
-                @endif
-            </td>
+            <td>{{ $entry->subject_display }}</td>
+            {{-- COURSE (FINAL OUTPUT) --}}
+            <td>{{ $entry->course_display }}</td>
 
             {{-- ROOM --}}
             <td>{{ $entry->room_name }}</td>
@@ -153,13 +149,11 @@
 
 @empty
     <tr>
-        <td colspan="6">No timetable found for this teacher.</td>
+        <td colspan="5">No timetable found for this teacher.</td>
     </tr>
 @endforelse
-</tbody>
-
+    </tbody>
 </table>
-
 
 </div>
         <a href="{{ route('teacher.load.report1') }}" class="btn btn-secondary btn-sm">← Back</a>

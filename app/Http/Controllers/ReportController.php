@@ -31,7 +31,7 @@ public function teacherLoadReport(Request $request)
         ->join('days as dy', 't.day_id', '=', 'dy.id')
         ->select(
             'tr.id as teacher_id',
-            DB::raw("CONCAT(tr.firstname, ' ', tr.lastname) as teacher_name"),
+            DB::raw("CONCAT(tr.firstname, ' ', tr.middlename,' ',tr.lastname) as teacher_name"),
             'd.deptName as department',
             't.day_id',
             'dy.day_name',
@@ -40,7 +40,7 @@ public function teacherLoadReport(Request $request)
             'ts.end_time',
             's.semester_id',
             's.id as subject_id'
-        );
+        )->orderBy("tr.firstname");
 
     if ($request->filled('department_id')) {
         $query->where('d.id', $request->department_id);
@@ -166,29 +166,31 @@ public function teacherLoadReport(Request $request)
     public function index1(Request $request)
 {
     $departments = Department::all();
-    $activeSemester = Semester::where('status', 'Active')->first();
+
+    // 🔥 CHUKUA SEMESTER ZOTE ACTIVE
+    $activeSemesters = Semester::where('status', 'Active')->pluck('id');
 
     $reportType = $request->get('report_type');
-    $roomId = $request->get('room_id');  // room to filter
+    $roomId = $request->get('room_id');
     $report = null;
 
     $days = DB::table('days')->orderBy('id')->get();
     $timeslots = DB::table('timeslots')->orderBy('id')->get();
 
-    // For room selection (Normal + Lab)
     $allRooms = DB::table('rooms')->select('id','name')->get();
 
     if ($reportType === 'room' && $roomId) 
     {
-        // Fetch timetables for the active semester and selected room
         $usage = DB::table('timetables')
             ->join('subjects','timetables.subject_id','=','subjects.id')
-            ->where('subjects.semester_id', $activeSemester->id ?? 0)
+
+            // 🔥 BADALA YA SINGLE SEMESTER
+            ->whereIn('subjects.semester_id', $activeSemesters)
+
             ->where('timetables.room_id', $roomId)
             ->select('timetables.day_id','timetables.timeslot_id')
             ->get();
 
-        // Prepare usage map
         $usageMap = [];
 
         foreach ($usage as $u) {
@@ -205,7 +207,7 @@ public function teacherLoadReport(Request $request)
 
     return view('roomusage', compact(
         'departments', 
-        'activeSemester',
+        'activeSemesters', // optional kama utahitaji view
         'reportType',
         'report',
         'days',
@@ -213,7 +215,6 @@ public function teacherLoadReport(Request $request)
         'allRooms'
     ));
 }
-
 
 
 

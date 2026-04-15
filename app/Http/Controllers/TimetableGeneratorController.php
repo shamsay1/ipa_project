@@ -1089,6 +1089,25 @@ public function showedit($id){
     $time = Timeslot::all();
     return view("timetableEdit", compact('timetable','subjects','rooms','days','time'));
 }
+public function availableRooms(Request $request)
+{
+    $dayId = $request->day_id;
+    $timeslotId = $request->timeslot_id;
+    $timetableId = $request->timetable_id;
+
+    // Rooms ambazo tayari zinatumika
+    $busyRooms = Timetable::where('day_id', $dayId)
+        ->where('timeslot_id', $timeslotId)
+        ->where('id', '!=', $timetableId) // ignore current record
+        ->pluck('room_id');
+
+    // Rooms free
+    $availableRooms = Room::whereNotIn('id', $busyRooms)->get();
+
+    return response()->json([
+        'rooms' => $availableRooms
+    ]);
+}
 public function update(Request $request,$id){
     $request->validate([
         "teacher_id" => "required",
@@ -1257,13 +1276,16 @@ public function checkSolutions(Request $request)
         return response()->json(['solutions' => []]);
     }
 
+    // 🔥 pata course level
+    $course = DB::table('courses')->where('id', $subject->course_id)->first();
+    $courseLevel = $course ? strtolower($course->course_level) : null;
+
     $days  = DB::table('days')->get();
     $slots = DB::table('timeslots')->get();
 
     // ==========================
-    // 1️⃣ ROOM FILTERING
+    // ROOM FILTERING
     // ==========================
-
     if (strtolower($subject->required_lab) !== 'theory') {
         $rooms = DB::table('rooms')
             ->leftJoin('buildings','rooms.building_id','=','buildings.id')
@@ -1285,49 +1307,86 @@ public function checkSolutions(Request $request)
 
     $solutions = [];
 
-    // ==========================
-    // 2️⃣ LOOP DAYS
-    // ==========================
-
     foreach ($days as $day) {
 
-        $daySolutionsCount = 0; // limit ya solutions kwa siku (max 5)
+        $dayName = strtolower($day->day_name);
+
+        // 🔥 Tambua weekend
+        $isWeekend = in_array($dayName, ['saturday', 'sunday']);
+
+        // ==========================
+        // 🔥 SUBJECT LIMIT PER DAY (MAX 3)
+        // ==========================
+        $subjectCount = DB::table('timetables')
+            ->where('subject_id', $subjectId)
+            ->where('day_id', $day->id)
+            ->count();
+
+        if ($subjectCount >= 2) {
+            continue; 
+        }
+
+        $daySolutionsCount = 0;
 
         foreach ($slots as $slot) {
+
+            // ==========================
+            // 🔥 TIME FILTERING
+            // ==========================
+            $startTime = strtotime($slot->start_time);
+
+            // DEGREE RULE
+            if ($courseLevel == 'degree') {
+
+                if (!$isWeekend) {
+                    // weekday → only after 16:00
+                    if ($startTime < strtotime("16:00:00")) {
+                        continue;
+                    }
+                }
+                // weekend → no restriction
+
+            }
+            // DIPLOMA RULE
+            elseif ($courseLevel == 'diploma') {
+
+                if ($startTime < strtotime("08:00:00") || $startTime > strtotime("16:00:00")) {
+                    continue;
+                }
+            }
+
             foreach ($rooms as $room) {
 
-                // limit ya solutions kwa siku moja
                 if ($daySolutionsCount >= 5) {
                     break;
                 }
 
                 // ==========================
-                // CONFLICT CHECK (UPDATED)
+                // CONFLICT CHECK
                 // ==========================
-
                 $hasConflict = DB::table('timetables AS t')
                     ->join('subjects AS s', 't.subject_id', '=', 's.id')
                     ->where(function ($q) use ($subject, $day, $slot, $room) {
 
-                        // ROOM conflict
+                        // ROOM
                         $q->orWhere(function ($q2) use ($day, $slot, $room) {
                             $q2->where('t.room_id', $room->id)
                                ->where('t.day_id', $day->id)
                                ->where('t.timeslot_id', $slot->id);
                         });
 
-                        // TEACHER conflict
+                        // TEACHER
                         $q->orWhere(function ($q2) use ($subject, $day, $slot) {
                             $q2->where('s.teacher_id', $subject->teacher_id)
                                ->where('t.day_id', $day->id)
                                ->where('t.timeslot_id', $slot->id);
                         });
 
-                        // COURSE + NTA + SEMESTER conflict (🔥 FIXED)
+                        // COURSE + NTA + SEMESTER
                         $q->orWhere(function ($q2) use ($subject, $day, $slot) {
                             $q2->where('s.course_id', $subject->course_id)
                                ->where('s.nta_level', $subject->nta_level)
-                               ->where('s.semester_id', $subject->semester_id) // 🔥 muhimu sana
+                               ->where('s.semester_id', $subject->semester_id)
                                ->where('t.day_id', $day->id)
                                ->where('t.timeslot_id', $slot->id);
                         });
@@ -1352,7 +1411,7 @@ public function checkSolutions(Request $request)
                         'room_name' => $roomLabel
                     ];
 
-                    $daySolutionsCount++; // ongeza counter
+                    $daySolutionsCount++;
                 }
             }
         }
@@ -1378,12 +1437,15 @@ public function downloadTimetable($type)
 
 public function viewTeacherTimetable($id)
 {
-    
     $teacher = DB::table('teachers')->where('id', $id)->first();
+
     if (!$teacher) {
         return redirect()->back()->with('error', 'Teacher not found');
     }
-    $activeSemester = DB::table('semesters')->where('status', 'Active')->first();
+
+    $activeSemesters = DB::table('semesters')
+        ->where('status', 'Active')
+        ->pluck('id');
 
     $entries = DB::table('timetables')
         ->join('subjects', 'timetables.subject_id', '=', 'subjects.id')
@@ -1392,26 +1454,81 @@ public function viewTeacherTimetable($id)
         ->join('timeslots', 'timetables.timeslot_id', '=', 'timeslots.id')
         ->join('rooms', 'timetables.room_id', '=', 'rooms.id')
         ->where('subjects.teacher_id', $id)
-        ->when($activeSemester, fn($q) => $q->where('subjects.semester_id', $activeSemester->id))
+
+        ->when($activeSemesters->count() > 0, function ($q) use ($activeSemesters) {
+            $q->whereIn('subjects.semester_id', $activeSemesters);
+        })
+
         ->select(
             'days.day_name',
             'timeslots.start_time',
             'timeslots.end_time',
             'subjects.subjectName',
-            'courses.courseName',
+            'subjects.group_name',
+            'courses.short_name',
             'subjects.nta_level',
-            'timetables.group_name',   
             'rooms.name as room_name'
         )
         ->orderBy('days.id')
         ->orderBy('timeslots.start_time')
-        ->orderBy('timetables.group_name')
         ->get();
-    $groupedEntries = $entries->groupBy('day_name');
 
-    return view('viewttimetable', compact('teacher', 'groupedEntries', 'activeSemester'));
+    // 🔥 GROUP LOGIC
+    $processed = $entries->groupBy(function ($item) {
+
+        // kama kuna group_name → group kwa hiyo
+        if (!empty($item->group_name)) {
+            return $item->day_name . '|' .
+                   $item->start_time . '|' .
+                   $item->end_time . '|' .
+                   $item->group_name;
+        }
+
+        // kama hakuna → treat as single subject
+        return $item->day_name . '|' .
+               $item->start_time . '|' .
+               $item->end_time . '|' .
+               $item->subjectName;
+    })
+    ->map(function ($group) {
+
+        $first = $group->first();
+
+        // prefix
+        $prefix = '';
+        switch ($first->nta_level) {
+            case "NTA-4": $prefix = 'BTC'; break;
+            case "NTA-5": $prefix = 'TC'; break;
+            case "NTA-6": $prefix = 'OD'; break;
+            case "NTA-7": $prefix = 'HD'; break;
+            case "NTA-8": $prefix = 'B'; break;
+        }
+
+        // combine courses
+        $courses = $group->pluck('short_name')->unique();
+        $courseDisplay = $courses->count() > 1
+            ? $prefix . $courses->implode(' + ')
+            : $prefix . $courses->first();
+
+        // 🔥 SUBJECT NAME LOGIC
+        $subjectDisplay = !empty($first->group_name)
+            ? strtoupper($first->group_name)
+            : $first->subjectName;
+
+        return (object)[
+            'day_name' => $first->day_name,
+            'start_time' => $first->start_time,
+            'end_time' => $first->end_time,
+            'subject_display' => $subjectDisplay,
+            'course_display' => $courseDisplay,
+            'room_name' => $first->room_name,
+        ];
+    });
+
+    $groupedEntries = $processed->groupBy('day_name');
+
+    return view('viewttimetable', compact('teacher', 'groupedEntries'));
 }
-
 
 public function solveConflicts(Request $request)
 {

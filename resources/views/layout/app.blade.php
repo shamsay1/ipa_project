@@ -473,7 +473,7 @@
         <a href="{{ url('/adminprofile') }}"
            class="nav-link {{ Route::currentRouteName() == 'adminprofile.index' ? 'active' : '' }}">
             <i class="bi bi-gear"></i>
-            <span>Profile</span>
+            <span>Setting</span>
         </a>
     </li>
 

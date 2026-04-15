@@ -457,7 +457,7 @@
         <a href="<?php echo e(url('/adminprofile')); ?>"
            class="nav-link <?php echo e(Route::currentRouteName() == 'adminprofile.index' ? 'active' : ''); ?>">
             <i class="bi bi-gear"></i>
-            <span>Profile</span>
+            <span>Setting</span>
         </a>
     </li>
 

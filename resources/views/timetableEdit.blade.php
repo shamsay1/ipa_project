@@ -328,7 +328,66 @@ function checkConflictsForButton() {
     })
     .catch(err => console.error(err));
 }
+function loadAvailableRooms() {
+    const dayId = document.getElementById('day_id').value;
+    const timeslotId = document.getElementById('timeslot_id').value;
+    const timetableId = {{ $timetable->id }};
 
+    const roomSelect = document.getElementById('room_id');
+    const selectedRoom = roomSelect.value; // 👉 HII INAOKOA ROOM YA MWANZO
+
+    if (!dayId || !timeslotId) return;
+
+    fetch('{{ route("timetable.availableRooms") }}', {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "X-CSRF-TOKEN": "{{ csrf_token() }}"
+        },
+        body: JSON.stringify({
+            day_id: dayId,
+            timeslot_id: timeslotId,
+            timetable_id: timetableId
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+
+        roomSelect.innerHTML = '<option value="">-- Select Room --</option>';
+
+        let roomStillExists = false;
+
+        data.rooms.forEach(room => {
+            let selected = "";
+
+            // 👉 kama room ya zamani bado ipo basi ibaki selected
+            if (room.id == selectedRoom) {
+                selected = "selected";
+                roomStillExists = true;
+            }
+
+            roomSelect.innerHTML += `
+                <option value="${room.id}" ${selected}>
+                    ${room.name}
+                </option>
+            `;
+        });
+
+        // 👉 kama room ya zamani haipo kwenye free rooms
+        if (selectedRoom && !roomStillExists) {
+            roomSelect.innerHTML += `
+                <option value="${selectedRoom}" selected>
+                    (Previously Selected - Not Available)
+                </option>
+            `;
+        }
+
+    });
+}
+loadAvailableRooms();
+
+document.getElementById('day_id').addEventListener('change', loadAvailableRooms);
+document.getElementById('timeslot_id').addEventListener('change', loadAvailableRooms);
 // Run once on page load
 document.addEventListener('DOMContentLoaded', function() {
     loadSolutions();

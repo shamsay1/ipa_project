@@ -101,11 +101,9 @@
 <div id="content">
     <div class="table-container p-3">
         <div class="row mb-4">
-            <h3></h3>
-        <h5 style="font-family: 'Times New Roman', Times, serif;text-align: center;font-size: 24px">Teaching Timetable for Teacher <strong style="font-family: 'Times New Roman', Times, serif;text-align: center;color: green;font-size: 25px"><?php echo e(strtoupper($teacher->firstname . ' ' . $teacher->lastname)); ?></strong></h5>
-        <?php if($activeSemester): ?>
-            <p style="font-family: 'Times New Roman', Times, serif;text-align: center;color: green;font-size: 24px"><strong>Semester:</strong> <?php echo e($activeSemester->semName); ?></p>
-        <?php endif; ?>
+            <h3 style="text-align: center;font-family: 'Times New Roman', Times, serif">THE INSTITUTES OF PUBLIC AND ADMINISTRATION(IPA)</h3>
+        <h5 style="font-family: 'Times New Roman', Times, serif;text-align: center;font-size: 24px">Teaching Timetable for Teacher <span style="font-family: 'Times New Roman', Times, serif;text-align: center;color: green;font-size: 25px"><?php echo e(strtoupper($teacher->firstname . ' ' . $teacher->middlename. ' ' . $teacher->lastname)); ?></span></h5>
+        
         
         <table class="table table-bordered text-center">
     <thead>
@@ -123,29 +121,27 @@
     <?php $__currentLoopData = $entries; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $key => $entry): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
         <tr>
 
+            
             <?php if($key === 0): ?>
                 <td rowspan="<?php echo e(count($entries)); ?>" 
-                    class="align-middle" 
-                    style="writing-mode: vertical-lr; text-align:center; font-weight:bolder">
-                    <strong><?php echo e($day); ?></strong>
+                    class="align-middle"
+                    style="writing-mode: vertical-lr; font-weight:bold;">
+                    <?php echo e($day); ?>
+
                 </td>
             <?php endif; ?>
 
             
-            <td><?php echo e(date('H:i', strtotime($entry->start_time))); ?> - <?php echo e(date('H:i', strtotime($entry->end_time))); ?></td>
-
-            
-            <td><?php echo e($entry->subjectName); ?></td>
-
-            
             <td>
-                <?php echo e($entry->courseName . ' : ' . $entry->nta_level); ?>
+                <?php echo e(date('H:i', strtotime($entry->start_time))); ?> -
+                <?php echo e(date('H:i', strtotime($entry->end_time))); ?>
 
-                <?php if($entry->group_name): ?>
-                    <?php echo e(' GROUP ' . strtoupper($entry->group_name)); ?>
-
-                <?php endif; ?>
             </td>
+
+            
+            <td><?php echo e($entry->subject_display); ?></td>
+            
+            <td><?php echo e($entry->course_display); ?></td>
 
             
             <td><?php echo e($entry->room_name); ?></td>
@@ -155,13 +151,11 @@
 
 <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
     <tr>
-        <td colspan="6">No timetable found for this teacher.</td>
+        <td colspan="5">No timetable found for this teacher.</td>
     </tr>
 <?php endif; ?>
-</tbody>
-
+    </tbody>
 </table>
-
 
 </div>
         <a href="<?php echo e(route('teacher.load.report1')); ?>" class="btn btn-secondary btn-sm">← Back</a>
