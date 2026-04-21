@@ -23,7 +23,6 @@ class RoomController extends Controller
 
     $file = $request->file('class_file');
 
-    // 1️⃣ Check headers first
     $expectedHeaders = ['classname', 'capacity', 'building_code', 'type', 'practical_type'];
 
     $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($file->getPathname());
@@ -69,15 +68,19 @@ class RoomController extends Controller
 {
     $query = Room::query(); 
 
-    if ($request->has('search') && $request->search != '') {
-        $search = $request->search;
-        $query->where('name', 'LIKE', "%$search%");
-    }
+    if ($request->filled('search')) {
+    $search = $request->search;
+
+    $query->where(function ($q) use ($search) {
+        $q->where('name', 'LIKE', "%{$search}%");
+        if (is_numeric($search)) {
+            $q->orWhere('capacity', (int)$search);
+        }
+    });
+}
 
     $rooms = $query->paginate(10)->withQueryString();
     $buildings = Building::all();
-
-    // Ikiwa ni AJAX request, rudisha partial view tu
     if ($request->ajax()) {
         return view('partials.room_table', compact('rooms'))->render();
     }

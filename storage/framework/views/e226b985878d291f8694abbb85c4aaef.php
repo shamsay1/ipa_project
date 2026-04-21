@@ -253,35 +253,10 @@ MY TIMETABLE
 
         <?php if($found): ?>
 
-            <?php
-                $prefix = '';
-
-                switch ($found->nta_level) {
-                    case "NTA-4":
-                        $prefix = 'BTC';
-                        break;
-                    case "NTA-5":
-                        $prefix = 'TC';
-                        break;
-                    case "NTA-6":
-                        $prefix = 'OD';
-                        break;
-                    case "NTA-7":
-                        $prefix = 'HD';
-                        break;
-                    case "NTA-8":
-                        $prefix = 'B';
-                        break;
-                }
-
-                // full course name
-                $fullCourseName = $prefix . ($found->short_name ?? $found->fullCourseName);
-            ?>
-
             <?php if($found->group_name): ?>
 
                 <strong>
-                 <?php echo e(strtoupper($found->group_name)); ?>
+                    <?php echo e(strtoupper($found->group_name)); ?>
 
                 </strong>
                 <br>
@@ -290,9 +265,7 @@ MY TIMETABLE
                 <?php
                     $groupSubjects = collect();
                     if(isset($groupCourses[$found->group_name])) {
-                        $groupSubjects = $groupCourses[$found->group_name]->map(function($s){
-                            return $s;
-                        });
+                        $groupSubjects = $groupCourses[$found->group_name];
                     }
                 ?>
 
@@ -310,7 +283,7 @@ MY TIMETABLE
                 </strong>
                 <br>
 
-                <?php echo e($fullCourseName); ?> (<?php echo e($found->nta_level); ?>)
+                <?php echo e($found->fullCourseName); ?> (<?php echo e($found->nta_level); ?>)
                 <br>
 
                 ROOM: <?php echo e($found->room_name); ?>
@@ -355,7 +328,7 @@ MY TIMETABLE
 </div>
 
 
-  <script>
+ <script>
 function printTeacherTimetable(button) {
     const timetableData = JSON.parse(button.getAttribute("data-timetable"));
     const timeslots = JSON.parse(button.getAttribute("data-timeslots"));
@@ -363,16 +336,17 @@ function printTeacherTimetable(button) {
 
     const days = Object.keys(timetableData);
 
-    // ==== Define groupCourses for legend ====
+    // ==== Collect GROUP COURSES (use fullCourseName) ====
     const groupCourses = {};
 
-    // Loop through timetableData to collect group subjects
     days.forEach(day => {
         timetableData[day].forEach(entry => {
-            if(entry.group_name) {
+            if(entry.group_name){
                 if(!groupCourses[entry.group_name]) groupCourses[entry.group_name] = [];
-                if(!groupCourses[entry.group_name].includes(entry.subjectName)) {
-                    groupCourses[entry.group_name].push(entry.subjectName);
+
+                // tumia fullCourseName (ina Roman tayari)
+                if(!groupCourses[entry.group_name].includes(entry.fullCourseName)){
+                    groupCourses[entry.group_name].push(entry.fullCourseName);
                 }
             }
         });
@@ -393,74 +367,69 @@ function printTeacherTimetable(button) {
             th,td{border:1px solid black; padding:6px; text-align:center; vertical-align:middle;}
             th{background:#e9ecef; font-weight:bold;}
             td:first-child{font-weight:bold; background:#f2f2f2;}
-            .legend { font-weight:bold; background:#f8f9fa; text-align:left; }
         </style>
     </head>
     <body onload="window.print();window.close();">
         <h2>THE INSTITUTE OF PUBLIC AND ADMINISTRATION</h2>
         <h4>TIMETABLE FOR TEACHER: ${teacherName.toUpperCase()}</h4>
+
         <table>
             <thead>
                 <tr>
                     <th>DAY / TIME</th>
                     ${timeslots.map((slot,index) => `
                         <th style="font-size:11px;line-height:1.2">
-                            <div style="font-weight:bold;font-size: 25px">${index + 1}</div>
+                            <div style="font-weight:bold;font-size:25px">${index + 1}</div>
                             <div>${slot.start.slice(0,5)} - ${slot.end.slice(0,5)}</div>
                         </th>
                     `).join('')}
                 </tr>
             </thead>
+
             <tbody>
                 ${days.map(day => `
                     <tr>
                         <td>${day.toUpperCase()}</td>
+
                         ${timeslots.map(slot => {
+
                             const entry = timetableData[day].find(e =>
                                 e.start_time === slot.start && e.end_time === slot.end
                             );
+
                             if(entry){
-                                // NTA Prefix
-                                let ntaPrefix = '';
-                                switch (entry.nta_level) {
-                                    case "NTA-4": ntaPrefix = 'BTC'; break;
-                                    case "NTA-5": ntaPrefix = 'TC'; break;
-                                    case "NTA-6": ntaPrefix = 'OD'; break;
-                                    case "NTA-7": ntaPrefix = 'HD'; break;
-                                    case "NTA-8": ntaPrefix = 'B'; break;
-                                }
-                                // Full Course Name
-                                const fullCourseName =(entry.courseShortName ?? entry.fullCourseName);
 
-                                // Semester Roman
-                                let semesterRoman = '';
-                                if(entry.semName && entry.semName.includes('1')) semesterRoman = 'I';
-                                else if(entry.semName && entry.semName.includes('2')) semesterRoman = 'II';
-
-                                // Entry HTML
                                 let html = '';
-                                if(entry.group_name){
-                                    
-                                   const groupSubjects = groupCourses[entry.group_name] || [];
 
-                                    html += '<strong>' + groupSubjects.join(' + ') + '</strong><br>';
+                                if(entry.group_name){
+
+                                    const groupSubjects = groupCourses[entry.group_name] || [];
+
+                                    // 🔥 SHOW GROUP NAME + COURSES
+                                    html += '<strong>' + entry.group_name.toUpperCase() + '</strong><br>';
+                                    html += groupSubjects.join(' + ') + '<br>';
                                     html += 'ROOM: ' + entry.room_name;
+
                                 }else{
+
                                     html += `<strong>${entry.subjectName} (${entry.subjectCode})</strong><br>`;
-                                    html += `${fullCourseName} ${semesterRoman} (${entry.nta_level})<br>`;
+                                    html += `${entry.fullCourseName} (${entry.nta_level})<br>`;
                                     html += 'ROOM: ' + entry.room_name;
                                 }
+
                                 return `<td>${html}</td>`;
+
                             }else{
                                 return `<td></td>`;
                             }
+
                         }).join('')}
+
                     </tr>
                 `).join('')}
-
-                
             </tbody>
         </table>
+
     </body>
     </html>
     `);

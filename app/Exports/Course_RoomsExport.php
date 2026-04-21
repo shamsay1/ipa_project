@@ -15,7 +15,8 @@ class Course_RoomsExport implements WithHeadings, WithEvents
         return [
             'courseName',
             'nta_level',
-            'class_name'
+            'class_name',
+            'total_students'
         ];
     }
 
@@ -27,9 +28,9 @@ class Course_RoomsExport implements WithHeadings, WithEvents
                 $sheet = $event->sheet->getDelegate();
 
                 // ===== STYLE HEADER =====
-                $sheet->getStyle('A1:C1')->getFont()->setBold(true);
+                $sheet->getStyle('A1:D1')->getFont()->setBold(true);
 
-                foreach (['A', 'B', 'C'] as $col) {
+                foreach (['A', 'B', 'C','D'] as $col) {
                     $sheet->getColumnDimension($col)->setAutoSize(true);
                 }
                 $courses = Course::whereNotNull('short_name')

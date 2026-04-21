@@ -457,9 +457,15 @@ public function TeacherImport(Request $request)
         "subjects" => array_values($grouped)
     ]);
 }
-  public function teacherTimetable()
+ public function teacherTimetable()
 {
     $teacher = Auth::user();
+
+    /*
+    =========================
+    TIMETABLE ENTRIES
+    =========================
+    */
 
     $timetableEntries = DB::table('timetables')
         ->join('subjects', 'timetables.subject_id', '=', 'subjects.id')
@@ -477,72 +483,98 @@ public function TeacherImport(Request $request)
             'subjects.subjectName',
             'subjects.subjectCode',
             'subjects.nta_level',
-            'subjects.group_name', // 👈 muhimu sana
+            'semesters.semName',
+            'subjects.group_name',
             'courses.short_name',
             'teachers.firstname',
             'teachers.lastname',
+            'teachers.mobile',
             'rooms.name as room_name'
         )
         ->where('subjects.teacher_id', $teacher->id)
         ->where('semesters.status', 'Active')
-        ->orderByRaw("FIELD(days.day_name, 'Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday')")
+        ->orderByRaw("FIELD(days.day_name,'Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday')")
         ->orderBy('timeslots.start_time')
         ->get()
+        ->map(function ($item) {
 
-        // 🔥 GROUPING (core logic)
-        ->groupBy(function ($item) {
-            return $item->day_name . '|' . 
-                   $item->start_time . '|' . 
-                   $item->end_time . '|' . 
-                   ($item->group_name ?? $item->subjectName);
-        })
-
-        ->map(function ($group) {
-
-            $first = $group->first();
-
-            $levels = [];
-            $courses = [];
-
-            foreach ($group as $item) {
-
-                // PREFIX ya NTA
-                $prefix = '';
-                switch ($item->nta_level) {
-                    case "NTA-4": $prefix = 'BTC'; break;
-                    case "NTA-5": $prefix = 'TC'; break;
-                    case "NTA-6": $prefix = 'OD'; break;
-                    case "NTA-7": $prefix = 'HD'; break;
-                    case "NTA-8": $prefix = 'B'; break;
-                }
-
-                // collect NTA
-                if (!in_array($prefix, $levels)) {
-                    $levels[] = $prefix;
-                }
-
-                // collect courses (BTCPA format)
-                $fullCourse = $prefix . $item->short_name;
-
-                if (!in_array($fullCourse, $courses)) {
-                    $courses[] = $fullCourse;
-                }
+            // PREFIX
+            $prefix = '';
+            switch ($item->nta_level) {
+                case "NTA-4": $prefix = 'BTC'; break;
+                case "NTA-5": $prefix = 'TC'; break;
+                case "NTA-6": $prefix = 'OD'; break;
+                case "NTA-7": $prefix = 'HD'; break;
+                case "NTA-8": $prefix = 'B'; break;
             }
 
-            // attach combined data
-            $first->combined_levels = implode(' + ', $levels);
-            $first->combined_courses = implode(' + ', $courses);
+            // SEMESTER → ROMAN
+            $semesterRoman = '';
+            if (str_contains($item->semName, '1')) {
+                $semesterRoman = 'I';
+            } elseif (str_contains($item->semName, '2')) {
+                $semesterRoman = 'II';
+            }
 
-            // jina la ku-display
-            $first->display_name = !empty($first->group_name)
-                ? $first->group_name
-                : $first->subjectName;
+            // FINAL NAME
+            $item->fullCourseName = $prefix . $item->short_name . $semesterRoman;
 
-            return $first;
+            return $item;
+        });
+
+    /*
+    =========================
+    GROUP COURSES
+    =========================
+    */
+
+    $groupCourses = DB::table('subjects')
+        ->join('courses','subjects.course_id','=','courses.id')
+        ->join('semesters','subjects.semester_id','=','semesters.id')
+        ->whereNotNull('subjects.group_name')
+        ->select(
+            'subjects.group_name',
+            'subjects.nta_level',
+            'courses.short_name',
+            'semesters.semName'
+        )
+        ->get()
+        ->map(function($item){
+
+            // PREFIX
+            $prefix = '';
+            switch ($item->nta_level) {
+                case "NTA-4": $prefix = 'BTC'; break;
+                case "NTA-5": $prefix = 'TC'; break;
+                case "NTA-6": $prefix = 'OD'; break;
+                case "NTA-7": $prefix = 'HD'; break;
+                case "NTA-8": $prefix = 'B'; break;
+            }
+
+            // SEMESTER → ROMAN
+            $semesterRoman = '';
+            if (str_contains($item->semName, '1')) {
+                $semesterRoman = 'I';
+            } elseif (str_contains($item->semName, '2')) {
+                $semesterRoman = 'II';
+            }
+
+            // FINAL NAME
+            $item->courseName = $prefix . $item->short_name . $semesterRoman;
+
+            return $item;
         })
-        ->values();
+        ->groupBy('group_name')
+        ->map(function($items){
+            return $items->pluck('courseName')->unique()->values();
+        });
 
-    // 🔥 TIMESLOTS
+    /*
+    =========================
+    TIMESLOTS
+    =========================
+    */
+
     $timeslots = DB::table('timeslots')
         ->orderBy('start_time')
         ->get()
@@ -553,22 +585,19 @@ public function TeacherImport(Request $request)
             ];
         });
 
-    // 🔥 FINAL STRUCTURE
+    /*
+    =========================
+    FINAL TIMETABLE
+    =========================
+    */
+
     $timetable = [
         'timeslots' => $timeslots,
-        'entries' => $timetableEntries
-            ->groupBy('day_name')
-            ->map(function ($dayItems) {
-                return $dayItems->keyBy(function ($item) {
-                    return $item->start_time . '|' . $item->end_time;
-                });
-            })
+        'entries' => $timetableEntries->groupBy('day_name')
     ];
 
-    return view('teachertbl', compact('timetable'));
+    return view('teachertbl', compact('timetable','groupCourses'));
 }
-
-
         public function profile(){
             return view("profile");
         }
@@ -647,7 +676,6 @@ public function TeacherImport(Request $request)
         ->orderBy('subjects.group_name')
         ->get();
 
-    // GROUPING
     $groupedSubjects = [];
 
     foreach ($subjectsRaw as $item) {
@@ -662,9 +690,17 @@ public function TeacherImport(Request $request)
             case "NTA-8": $prefix = 'B'; break;
         }
 
-        $courseName = $prefix . $item->short_name;
+        $semesterRoman = '';
+        if (str_contains($item->semName, '1')) {
+            $semesterRoman = 'I';
+        } elseif (str_contains($item->semName, '2')) {
+            $semesterRoman = 'II';
+        }
+        $courseName = $prefix . $item->short_name.$semesterRoman;
 
+        // 🔥 SEMESTER TO ROMAN
         
+
         $key = $item->group_name ?? $item->subjectName;
 
         if (!isset($groupedSubjects[$key])) {
@@ -673,8 +709,10 @@ public function TeacherImport(Request $request)
                 'courses' => [],
                 'subjectCode' => $item->subjectCode,
                 'nta_level' => $item->nta_level,
+                'semester' => $semesterRoman 
             ];
         }
+
         if (!in_array($courseName, $groupedSubjects[$key]['courses'])) {
             $groupedSubjects[$key]['courses'][] = $courseName;
         }
@@ -745,6 +783,12 @@ public function teacherTimetable1()
 {
     $teacher = Auth::user();
 
+    /*
+    =========================
+    TIMETABLE ENTRIES
+    =========================
+    */
+
     $timetableEntries = DB::table('timetables')
         ->join('subjects', 'timetables.subject_id', '=', 'subjects.id')
         ->join('courses', 'subjects.course_id', '=', 'courses.id')
@@ -776,69 +820,69 @@ public function teacherTimetable1()
         ->get()
         ->map(function ($item) {
 
+            // PREFIX
             $prefix = '';
-
             switch ($item->nta_level) {
-                case "NTA-4":
-                    $prefix = 'BTC';
-                    break;
-                case "NTA-5":
-                    $prefix = 'TC';
-                    break;
-                case "NTA-6":
-                    $prefix = 'OD';
-                    break;
-                case "NTA-7":
-                    $prefix = 'HD';
-                    break;
-                case "NTA-8":
-                    $prefix = 'B';
-                    break;
+                case "NTA-4": $prefix = 'BTC'; break;
+                case "NTA-5": $prefix = 'TC'; break;
+                case "NTA-6": $prefix = 'OD'; break;
+                case "NTA-7": $prefix = 'HD'; break;
+                case "NTA-8": $prefix = 'B'; break;
             }
 
-            $item->fullCourseName = $prefix . $item->short_name;
+            // SEMESTER → ROMAN
+            $semesterRoman = '';
+            if (str_contains($item->semName, '1')) {
+                $semesterRoman = 'I';
+            } elseif (str_contains($item->semName, '2')) {
+                $semesterRoman = 'II';
+            }
+
+            // FINAL NAME
+            $item->fullCourseName = $prefix . $item->short_name . $semesterRoman;
 
             return $item;
         });
 
     /*
     =========================
-    GET COURSES FOR GROUPS
+    GROUP COURSES
     =========================
     */
 
     $groupCourses = DB::table('subjects')
         ->join('courses','subjects.course_id','=','courses.id')
+        ->join('semesters','subjects.semester_id','=','semesters.id')
         ->whereNotNull('subjects.group_name')
         ->select(
             'subjects.group_name',
             'subjects.nta_level',
-            'courses.short_name'
+            'courses.short_name',
+            'semesters.semName'
         )
         ->get()
         ->map(function($item){
 
+            // PREFIX
             $prefix = '';
-
             switch ($item->nta_level) {
-                case "NTA-4":
-                    $prefix = 'BTC';
-                    break;
-                case "NTA-5":
-                    $prefix = 'TC';
-                    break;
-                case "NTA-6":
-                    $prefix = 'OD';
-                    break;
-                case "NTA-7":
-                    $prefix = 'HD';
-                    break;
-                case "NTA-8":
-                    $prefix = 'B';
-                    break;
+                case "NTA-4": $prefix = 'BTC'; break;
+                case "NTA-5": $prefix = 'TC'; break;
+                case "NTA-6": $prefix = 'OD'; break;
+                case "NTA-7": $prefix = 'HD'; break;
+                case "NTA-8": $prefix = 'B'; break;
             }
 
-            $item->courseName = $prefix . $item->short_name;
+            // SEMESTER → ROMAN
+            $semesterRoman = '';
+            if (str_contains($item->semName, '1')) {
+                $semesterRoman = 'I';
+            } elseif (str_contains($item->semName, '2')) {
+                $semesterRoman = 'II';
+            }
+
+            // FINAL NAME
+            $item->courseName = $prefix . $item->short_name . $semesterRoman;
 
             return $item;
         })

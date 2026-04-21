@@ -23,15 +23,14 @@ class CourseRoomsImport implements ToModel,WithHeadingRow
 
     if (!$courseText) return null;
 
-    // Gawa BIT-Diploma
+    
     $parts = explode('-', $courseText);
 
     if (count($parts) < 2) return null;
 
-    $shortName = trim($parts[0]); // BIT
-    $level     = trim($parts[1]); // Diploma
+    $shortName = trim($parts[0]); 
+    $level     = trim($parts[1]); 
 
-    // Tafuta course sahihi
     $course = Course::where('short_name', $shortName)
         ->where('course_level', $level)
         ->first();
@@ -46,6 +45,7 @@ class CourseRoomsImport implements ToModel,WithHeadingRow
         'course_id' => $course->id,
         'nta_level' => $row['nta_level'],
         'room_id'   => $room->id,
+        'total_students' =>trim($row['total_students']),
     ]);
 }
 }

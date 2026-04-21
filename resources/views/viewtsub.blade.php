@@ -113,7 +113,7 @@
    
         <p style="text-align: center"><strong>Department:</strong> {{ $teacher->department->deptName }}</p>
         <div>
-            <h5 class="mb-0 text-center" style="color: green;font-wweight: bold;font-family: 'Times New Roman', Times, serif">Subjects Taught by Teacher {{ strtoupper($teacher->firstname) }} {{ strtoupper($teacher->lastname) }}</h5>
+            <h5 class="mb-0 text-center" style="color: green;font-wweight: bold;font-family: 'Times New Roman', Times, serif">Subjects Taught by Teacher {{ strtoupper($teacher->firstname) }} {{ strtoupper($teacher->middlename) }} {{ strtoupper($teacher->lastname) }}</h5>
         </div>
 
            

@@ -464,6 +464,7 @@ public function generateTimetable(Request $request)
     'courses.courseName',
     'courses.short_name',
     'teachers.firstname',
+    'teachers.middlename',
     'teachers.lastname',
     'rooms.name as room_name',
     'semesters.semName as semester_name',
@@ -1945,13 +1946,18 @@ public function arrangeClasses(Request $request)
 
 public function syncGroupSubjects()
 {
-
     $groups = Subject::whereNotNull('group_name')
         ->get()
         ->groupBy('group_name');
 
     foreach ($groups as $groupName => $subjects) {
 
+        // Hakikisha kuna zaidi ya subject moja (wanashare group)
+        if ($subjects->count() < 2) {
+            continue;
+        }
+
+        // Chukua subject ya reference
         $referenceSubject = $subjects->first();
 
         $referenceTimetable = DB::table('timetables')
@@ -1963,6 +1969,54 @@ public function syncGroupSubjects()
             continue;
         }
 
+        // ============================
+        // 🔢 CALCULATE TOTAL STUDENTS
+        // ============================
+        $totalStudents = 0;
+
+        foreach ($subjects as $subject) {
+            $students = DB::table('course_rooms')
+                ->where('course_id', $subject->course_id)
+                ->where('nta_level', $subject->nta)
+                ->value('total_students');
+
+            $totalStudents += $students ?? 0;
+        }
+
+        // ============================
+        // 📘 DETECT SUBJECT TYPE
+        // ============================
+        // assumption: kuna column 'type' (theory/practical)
+        $type = strtolower($referenceSubject->type); 
+
+        // ============================
+        // 🏫 FIND SUITABLE ROOM
+        // ============================
+        $room = null;
+
+        if ($totalStudents > 50) {
+
+            if ($type == 'theory') {
+
+                $room = DB::table('rooms')
+                    ->where('type', 'theory')
+                    ->where('capacity', '>=', $totalStudents)
+                    ->orderBy('capacity', 'asc')
+                    ->first();
+
+            } elseif ($type == 'practical') {
+
+                $room = DB::table('rooms')
+                    ->where('type', 'Lab')
+                    ->where('capacity', '>=', $totalStudents)
+                    ->orderBy('capacity', 'asc')
+                    ->first();
+            }
+        }
+
+        // ============================
+        // 🔁 SYNC TIMETABLES
+        // ============================
         foreach ($subjects as $subject) {
 
             $subjectTimetable = DB::table('timetables')
@@ -1981,17 +2035,13 @@ public function syncGroupSubjects()
                     ->update([
                         'day_id' => $referenceTimetable[$index]->day_id,
                         'timeslot_id' => $referenceTimetable[$index]->timeslot_id,
-                        'room_id' => $referenceTimetable[$index]->room_id,
+                        'room_id' => $room ? $room->id : $referenceTimetable[$index]->room_id,
                     ]);
-
             }
-
         }
-
     }
 
-    return back()->with('success','Grouped subjects updated successfully');
-
+    return back()->with('success', 'Grouped subjects synced with room allocation successfully');
 }
 
 

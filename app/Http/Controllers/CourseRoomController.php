@@ -24,20 +24,21 @@ class CourseRoomController extends Controller
         'course_id'  => 'required|exists:courses,id',
         'nta_level'  => 'required|string',
         'group_name' => 'nullable|string',
+        'total_students' => 'nullable|string',
         'room_id'    => 'required|exists:rooms,id',
     ]);
 
     
-    $roomUsedInSameNta = Course_room::where('room_id', $request->room_id)
-        ->where('nta_level', $request->nta_level)
-        ->where('group_name', '!=', $request->group_name)
-        ->exists();
+    // $roomUsedInSameNta = Course_room::where('room_id', $request->room_id)
+    //     ->where('nta_level', $request->nta_level)
+    //     ->where('group_name', '!=', $request->group_name)
+    //     ->exists();
 
-    if ($roomUsedInSameNta) {
-        return back()->withErrors([
-            'room_id' => 'Chumba hiki tayari kimetumika na group nyingine ya NTA hii. Tafadhali chagua chumba kingine.',
-        ])->withInput();
-    }
+    // if ($roomUsedInSameNta) {
+    //     return back()->withErrors([
+    //         'room_id' => 'Chumba hiki tayari kimetumika na group nyingine ya NTA hii. Tafadhali chagua chumba kingine.',
+    //     ])->withInput();
+    // }
 
     
     $exists = Course_room::where('course_id', $request->course_id)
@@ -46,17 +47,18 @@ class CourseRoomController extends Controller
         ->where('room_id', $request->room_id)
         ->exists();
 
-    if ($exists) {
-        return back()->withErrors([
-            'room_id' => 'Taarifa hii tayari ipo. Tafadhali chagua chumba kingine.',
-        ])->withInput();
-    }
+    // if ($exists) {
+    //     return back()->withErrors([
+    //         'room_id' => 'Taarifa hii tayari ipo. Tafadhali chagua chumba kingine.',
+    //     ])->withInput();
+    // }
 
     
     Course_room::create([
         'course_id'  => $request->course_id,
         'nta_level'  => $request->nta_level,
         'group_name' => $request->group_name,
+        'total_students' =>$request->total_students,
         'room_id'    => $request->room_id,
     ]);
 

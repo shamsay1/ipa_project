@@ -159,11 +159,8 @@ unset($__errorArgs, $__bag); ?>
                 </div>
                 <div class="col-md-4 mb-3">
                     <label for="lastname" class="form-label">Capacity</label>
-                    <select class="form-select" name="capacity">
-                        <option value="">-- Select Type --</option>
-                        <option value="Normal">Normal</option>
-                        <option value="Hall">Hall</option>
-                    </select>
+                    <input type="number" class="form-control" name="capacity">
+                    
                 </div>
                 <div class="col-md-4 mb-3">
                     <label for="gender" class="form-label">Type</label>
@@ -203,9 +200,7 @@ unset($__errorArgs, $__bag); ?>
                         
                         <option value="">-- Select Practical --</option>
                         <option value="Normal">Normal</option>
-                        <option value="Computer Lab">Computer Lab</option>
-                        <option value="Skill Lab">Skill Lab</option>
-                        <option value="Compounding Lab">Compounding Lab</option>
+                        <option value="Computer">Computer Lab</option>
 
                     </select>
                     <?php $__errorArgs = ["type"];

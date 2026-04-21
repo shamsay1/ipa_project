@@ -257,7 +257,7 @@ SEMESTER: {{ strtoupper($timetable['semester']) }}
 @php
 $totalRowsForDay = 0;
 
-/* kuhesabu rows za siku */
+
 foreach($entriesByDay as $entry){
 
 $start = \Carbon\Carbon::parse($entry->start_time);
@@ -335,7 +335,7 @@ style="writing-mode: vertical-lr;text-align:center;font-weight:bold;">
     @endif
 </td>
 {{-- TEACHER --}}
-<td>{{ $entry->firstname }} {{ $entry->lastname }}</td>
+<td>{{ $entry->firstname }} {{ $entry->middlename }} {{ $entry->lastname }}</td>
 
 
 {{-- ROOM --}}

@@ -85,17 +85,16 @@
                         <th>#</th>
                         <th>Course</th>
                         <th>NTA Level</th>
-                        <th>Group</th>
+                        <th>Total Students</th>
                         <th>Classroom</th>
                         <th>Created At</th>
                         <th>Action</th>
                     </tr>
                 </thead>
                 @php
-    // Kwanza: Panga (Group) madarasa yote kwa Course Name.
-    // Hii ndiyo inafanya kazi ya 'deptCourses' yako, lakini inagroup kwa Kozi.
+    
     $groupedClassrooms = $classrooms->groupBy(function ($classroom) {
-        // Tunatumia ID au jina la kozi kama key ya kwanza
+  
         return $classroom->course->courseName ?? 'Kozi Isiyojulikana';
     });
 @endphp
@@ -122,7 +121,7 @@
                     {{ $classroom->course->courseName ?? 'N/A' }}
                 </td>
                 <td>{{ $classroom->nta_level }}</td>
-                <td>{{ $classroom->group_name ?? '—' }}</td>
+                <td>{{ $classroom->total_students}}</td>
                 <td>{{ $classroom->room->name ?? 'N/A' }}</td>
                 <td>{{ $classroom->created_at->format('Y-m-d') }}</td>
                 <td>
@@ -198,8 +197,8 @@
                     </select>
                 </div>
                 <div class="col-md-6 mb-3">
-                    <label class="form-label">Group Name(optional)</label>
-                    <input type="text" name="group_name" class="form-control">
+                    <label class="form-label">Total Students</label>
+                    <input type="number" name="total_students" class="form-control">
                     
                 </div>
             </div>

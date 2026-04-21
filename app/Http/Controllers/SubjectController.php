@@ -55,7 +55,6 @@ class SubjectController extends Controller
                 "nta" => "required",
                 "semester" => "required",
                 "subject_type" => "required",
-                "group_name" => "required",
                 "required_lab" => "required",
                 "crhour" => "required"
             ]);
@@ -67,7 +66,6 @@ class SubjectController extends Controller
                 "nta_level" =>$request->nta,
                 "semester_id" =>$request->semester,
                 "subject_type" =>$request->subject_type,
-                "group_name" =>$request->group_name,
                 "required_lab" =>$request->required_lab,
                 "credit_hour" => $request->crhour
             ]);

@@ -25,7 +25,6 @@
         border-radius: 4px;
         border: none;
         cursor: pointer;
-        float: center;
         
          
     }
@@ -225,63 +224,121 @@
               <div class="table-responsive">
                 <div class="text-end mt-3 nodis">
     <button 
-        class="btn1"
-        onclick="printTimetable(this)"
-        data-timetable='@json($timetable["entries"])'
-        data-course="{{ auth()->user()->courseName ?? '' }}"
-        data-nta="NTA {{ auth()->user()->nta_level ?? '' }}"
-        data-group="{{ auth()->user()->group_name ?? '' }}"
-        data-semester="{{ $timetable['semester'] ?? '' }}"
-        data-active="{{ $timetable['active'] ?? '' }}"
-        data-teacher="{{ Auth::user()->firstname }} {{ Auth::user()->lastname }}"
+                class="btn btn-primary"
+                onclick="printTeacherTimetable(this)"
 
-    >
-        <i class="bi bi-printer"></i> Print Timetable
-    </button>
+                data-timetable='@json($timetable["entries"])'
+                data-timeslots='@json($timetable["timeslots"])'
+                data-teacher="{{ Auth::user()->firstname }} {{ Auth::user()->lastname }}"
+                >
+
+                <i class="fas fa-print"></i> Print Timetable
+
+                </button>
 </div>
-                <table class="table table-hover table-sm">
-                    <thead>
-                        <tr style="background-color: #0f2a44">
-                            <th colspan="100" style="text-align: center;font-weight: bold;color: white">My Timetable</th>
-                        </tr>
-                        <tr>
-                        <th>DAY / TIME</th>
-                        @foreach($timetable['timeslots'] as $slot)
-                            <th>
-                                {{ date('H:i', strtotime($slot['start'])) }} -
-                                {{ date('H:i', strtotime($slot['end'])) }}
-                            </th>
-                        @endforeach
-                    </tr>
-                    </thead>
-                    <tbody>
-                                        @foreach($timetable['entries'] as $day => $dayEntries)
-                                        
-                                            <tr>
-                                                <td>{{ strtoupper($day) }}</td>
-                                                @foreach($timetable['timeslots'] as $slot)
-                                                    <td>
-                                                       @php
-$key = $slot['start'].'|'.$slot['end'];
-$found = $dayEntries[$key] ?? null;
-@endphp
-                                                        @if($found)
+                <table class="table table-hover table-bordered table-sm">
 
-<strong>{{ strtoupper($found->display_name) }} ({{ $found->subjectCode }})</strong><br>
+<thead>
 
-{{ $found->combined_courses }}<br>
+<tr style="background-color:#0f2a44;color:white">
+<th colspan="100" style="text-align:center">
+MY TIMETABLE
+</th>
+</tr>
+
+<tr>
+<th>DAY / TIME</th>
+
+@foreach($timetable['timeslots'] as $index => $slot)
+
+<th style="font-size:11px;line-height:1.2">
+
+<div style="font-weight:bold;font-size: 20px;text-align: center">
+{{ $index + 1 }}
+</div>
+
+<div style="font-size: 7px;text-align: center">
+{{ date('h:ia', strtotime($slot['start'])) }}
+-
+{{ date('h:ia', strtotime($slot['end'])) }}
+</div>
+
+</th>
+
+@endforeach
+
+</tr>
+
+</thead>
+
+<tbody>
+
+@foreach($timetable['entries'] as $day => $dayEntries)
+<tr>
+    <td style="font-weight:bold">
+        {{ strtoupper($day) }}
+    </td>
+
+    @foreach($timetable['timeslots'] as $slot)
+    <td>
+
+        @php
+            // tafuta entry kwa timeslot hii
+            $found = $dayEntries
+                ->where('start_time', $slot['start'])
+                ->where('end_time', $slot['end'])
+                ->first();
+        @endphp
+
+        @if($found)
+
+            @if($found->group_name)
+
+                <strong>
+                    {{ strtoupper($found->group_name) }}
+                </strong>
+                <br>
+
+                {{-- Group courses --}}
+                @php
+                    $groupSubjects = collect();
+                    if(isset($groupCourses[$found->group_name])) {
+                        $groupSubjects = $groupCourses[$found->group_name];
+                    }
+                @endphp
+
+                {{ implode(' + ', $groupSubjects->toArray()) }}
+                <br>
+
+                ROOM: {{ $found->room_name }}
+
+            @else
+
+                <strong>
+                    {{ $found->subjectName }} ({{ $found->subjectCode }})
+                </strong>
+                <br>
+
+                {{ $found->fullCourseName }} ({{ $found->nta_level }})
+                <br>
+
+                ROOM: {{ $found->room_name }}
+
+            @endif
+
+        @endif
+
+    </td>
+    @endforeach
+
+</tr>
+@endforeach
+
+</tbody>
 
 
 
-{{ $found->room_name }}
-
-@endif
-                                                    </td>
-                                                @endforeach
-                                            </tr>
-                                        @endforeach
-                                    </tbody>
-                </table>
+</table>
                 
             </div>
 
@@ -301,112 +358,114 @@ $found = $dayEntries[$key] ?? null;
     
     </div>
 
-   <script>
-function printTimetable(button) {
-
+ <script>
+function printTeacherTimetable(button) {
     const timetableData = JSON.parse(button.getAttribute("data-timetable"));
+    const timeslots = JSON.parse(button.getAttribute("data-timeslots"));
     const teacherName = button.getAttribute("data-teacher");
-
-    let timeslots = [];
-
-    for (let day in timetableData) {
-        timetableData[day].forEach(e => {
-            const slot = `${e.start_time.slice(0,5)} - ${e.end_time.slice(0,5)}`;
-            if (!timeslots.includes(slot)) timeslots.push(slot);
-        });
-    }
-
-    timeslots.sort((a, b) => {
-        const startA = a.split(' - ')[0];
-        const startB = b.split(' - ')[0];
-        return startA.localeCompare(startB);
-    });
 
     const days = Object.keys(timetableData);
 
+    // ==== Collect GROUP COURSES (use fullCourseName) ====
+    const groupCourses = {};
+
+    days.forEach(day => {
+        timetableData[day].forEach(entry => {
+            if(entry.group_name){
+                if(!groupCourses[entry.group_name]) groupCourses[entry.group_name] = [];
+
+                // tumia fullCourseName (ina Roman tayari)
+                if(!groupCourses[entry.group_name].includes(entry.fullCourseName)){
+                    groupCourses[entry.group_name].push(entry.fullCourseName);
+                }
+            }
+        });
+    });
+
+    // ===== open print window =====
     const printWindow = window.open('', '', 'width=1200,height=900');
 
     printWindow.document.write(`
-        <html>
-        <head>
-            <title>My Timetable</title>
-            <style>
-                body {
-                    margin: 40px;
-                    font-family: 'Times New Roman';
-                }
-                table {
-                    width: 100%;
-                    border-collapse: collapse;
-                    margin-top: 20px;
-                }
-                th, td {
-                    border: 1px solid #000;
-                    padding: 5px;
-                    text-align: center;
-                }
-                th {
-                    background: #eee;
-                }
-            </style>
-        </head>
+    <html>
+    <head>
+        <title>Teacher ${teacherName} Timetable</title>
+        <style>
+            @page { margin:0 }
+            body{ margin:40px; font-family:'Times New Roman'; }
+            h2,h4{text-align:center; margin:3px;}
+            table{width:100%; border-collapse:collapse; margin-top:20px; font-size:13px;}
+            th,td{border:1px solid black; padding:6px; text-align:center; vertical-align:middle;}
+            th{background:#e9ecef; font-weight:bold;}
+            td:first-child{font-weight:bold; background:#f2f2f2;}
+        </style>
+    </head>
+    <body onload="window.print();window.close();">
+        <h2>THE INSTITUTE OF PUBLIC AND ADMINISTRATION</h2>
+        <h4>TIMETABLE FOR TEACHER: ${teacherName.toUpperCase()}</h4>
 
-        <body onload="window.print(); window.close();">
+        <table>
+            <thead>
+                <tr>
+                    <th>DAY / TIME</th>
+                    ${timeslots.map((slot,index) => `
+                        <th style="font-size:11px;line-height:1.2">
+                            <div style="font-weight:bold;font-size:25px">${index + 1}</div>
+                            <div>${slot.start.slice(0,5)} - ${slot.end.slice(0,5)}</div>
+                        </th>
+                    `).join('')}
+                </tr>
+            </thead>
 
-            <h2 style="text-align:center;">TIMETABLE</h2>
-            <h4 style="text-align:center;">${teacherName}</h4>
-
-            <table>
-                <thead>
+            <tbody>
+                ${days.map(day => `
                     <tr>
-                        <th>DAY / TIME</th>
-                        ${timeslots.map((slot,index) => `
-                            <th>
-                                ${index+1}<br>
-                                ${slot}
-                            </th>
-                        `).join('')}
-                    </tr>
-                </thead>
+                        <td>${day.toUpperCase()}</td>
 
-                <tbody>
-                    ${days.map(day => `
-                        <tr>
-                            <td>${day.toUpperCase()}</td>
+                        ${timeslots.map(slot => {
 
-                            ${timeslots.map(slot => {
+                            const entry = timetableData[day].find(e =>
+                                e.start_time === slot.start && e.end_time === slot.end
+                            );
 
-                                const entry = timetableData[day].find(e =>
-                                    `${e.start_time.slice(0,5)} - ${e.end_time.slice(0,5)}` === slot
-                                );
+                            if(entry){
 
-                                if (entry) {
-                                    return `
-                                        <td>
-                                            <strong>${entry.display_name.toUpperCase()} (${entry.subjectCode})</strong><br>
-                                            ${entry.combined_courses}<br>
-                                            <b>${entry.combined_levels}</b><br>
-                                            ${entry.room_name}
-                                        </td>
-                                    `;
-                                } else {
-                                    return `<td></td>`;
+                                let html = '';
+
+                                if(entry.group_name){
+
+                                    const groupSubjects = groupCourses[entry.group_name] || [];
+
+                                    // 🔥 SHOW GROUP NAME + COURSES
+                                    html += '<strong>' + entry.group_name.toUpperCase() + '</strong><br>';
+                                    html += groupSubjects.join(' + ') + '<br>';
+                                    html += 'ROOM: ' + entry.room_name;
+
+                                }else{
+
+                                    html += `<strong>${entry.subjectName} (${entry.subjectCode})</strong><br>`;
+                                    html += `${entry.fullCourseName} (${entry.nta_level})<br>`;
+                                    html += 'ROOM: ' + entry.room_name;
                                 }
 
-                            }).join('')}
+                                return `<td>${html}</td>`;
 
-                        </tr>
-                    `).join('')}
-                </tbody>
-            </table>
+                            }else{
+                                return `<td></td>`;
+                            }
 
-        </body>
-        </html>
+                        }).join('')}
+
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+
+    </body>
+    </html>
     `);
 
     printWindow.document.close();
 }
 </script>
-
 </body>
 </html>

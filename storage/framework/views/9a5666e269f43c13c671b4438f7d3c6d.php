@@ -143,9 +143,7 @@
                     <label for="firstname" class="form-label">Practical Type</label>
                     <select name="practical_type" class="form-select">
                         <option value="Normal" <?php echo e($room->practical_type == "Normal" ? "selected" : ""); ?>>Normal</option>
-                        <option value="Computer Lab" <?php echo e($room->practical_type == "Computer Lab" ? "selected" : ""); ?>>Computer Lab</option>
-                        <option value="Skill Lab" <?php echo e($room->practical_type == "Skill Lab" ? "selected" : ""); ?>>Skill Lab</option>
-                        <option value="Compounding Lab" <?php echo e($room->practical_type == "Compounding Lab" ? "selected" : ""); ?>>Compounding Lab</option>
+                        <option value="Computer" <?php echo e($room->practical_type == "Computer" ? "selected" : ""); ?>>Computer Lab</option>
 
 
                     </select>
