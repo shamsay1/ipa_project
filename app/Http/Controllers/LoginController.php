@@ -11,6 +11,7 @@ use App\Models\Loggins;
 use App\Models\Room;
 use Illuminate\Support\Facades\DB;
 use App\Models\Semester;
+use App\Models\SystemTimetable;
 use PhpParser\Node\Stmt\ElseIf_;
 use Illuminate\Support\Facades\Http;
 
@@ -36,29 +37,37 @@ class LoginController extends Controller
     ])) {
 
         $teacher = Auth::guard('teacher')->user();
+        $timetable = SystemTimetable::first();
+        if ($teacher->user_level === "admin") {
+            return redirect()->route('dash');
+        }
+        if($timetable->status=="created"){
 
         if ($teacher->status === 'Blocked') {
             Auth::guard('teacher')->logout();
             return back()->with('custom', 'Your account is blocked.');
         }
-
-        if ($teacher->user_level === "admin") {
-            return redirect()->route('dash');
-        }
-
         if ($teacher->role === "Supervisor") {
             return redirect()->route('supdash');
         }
 
         return redirect()->route('dash1');
+        }else{
+            return redirect()->route("message");
+        }
     }
     
     if (Auth::guard('cr')->attempt([
         'email' => $loginInput,
         'password' => $password
     ])) {
-
-        return redirect()->route('student.dash');
+        $timetable = SystemTimetable::first();
+        if($timetable->status=="created"){
+            return redirect()->route('student.dash');
+        }
+        else{
+            return redirect()->route("message");
+        }
     }
     return back()->with("custom", "Wrong email or password");
 }

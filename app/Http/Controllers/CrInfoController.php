@@ -86,59 +86,78 @@ class CrInfoController extends Controller
         return redirect()->route('login')->with('error', 'Tafadhali login kwanza');
     }
 
-    // ===== CHECK HOLIDAY =====
-    $holiday = Holiday::where('date', $todayDate)
-                ->where('status', 'Paused')
-                ->first();
+    
+    $holiday = Holiday::where('date', $todayDate)->first();
 
-    // kama ni paused day usiingize attendance
-    if (!$holiday) {
-
-        // pata day_id
-        $day = Day::where('day_name', $todayName)->first();
-
-        if (!$day) {
-            return back()->with('error','Day not found');
-        }
-
-        // pata ratiba za leo
-        $timetables = Timetable::with(['teacher','subject','course'])
-            ->where('day_id', $day->id)
-            ->whereHas('subject', function($q) use ($user) {
-                $q->where('course_id', $user->course_id)
-                  ->where('nta_level', $user->nta);
-            })
-            ->get();
-
-        // ===== INGIZA AUTOMATIC ATTENDANCE =====
-        foreach ($timetables as $tt) {
-
-            // hakikisha teacher_id ipo
-            if(!$tt->teacher_id){
-                continue;
-            }
-
-            TeacherAttendance::firstOrCreate(
-                [
-                    'timetable_id' => $tt->id,
-                    'date' => $todayDate,
-                ],
-                [
-                    'teacher_id' => $tt->teacher_id,
-                    'subject_id' => $tt->subject_id,
-                    'status' => 'absent'
-                ]
-            );
-        }
+    if ($holiday) {
+        return view('lessons', [
+            'lessons' => [],
+            'holidayMessage' => "Leo ni holiday: {$holiday->name}"
+        ]);
     }
 
-    // ===== LETA ATTENDANCE YA LEO =====
-    $lessons = TeacherAttendance::with(['subject','timetable.timeslot','timetable.course'])
-        ->where('date', $todayDate)
-        ->whereHas('subject', function($q) use ($user){
-            $q->where('course_id', $user->course_id)
-              ->where('nta_level', $user->nta);
-        })
+
+    $timetables = DB::table('timetables')
+        ->join('subjects','subjects.id','=','timetables.subject_id')
+        ->join('days','days.id','=','timetables.day_id')
+
+        ->where('days.day_name', $todayName)
+        ->where('subjects.course_id', $user->course_id)
+        ->where('subjects.nta_level', $user->nta)
+        ->where('subjects.semester_id', $user->semester_id) // HII NDIO MUHIMU
+
+        ->select(
+            'timetables.id as timetable_id',
+            'timetables.teacher_id',
+            'timetables.subject_id'
+        )
+        ->get();
+
+    foreach ($timetables as $tt) {
+
+        if(!$tt->teacher_id){
+            continue;
+        }
+
+        TeacherAttendance::firstOrCreate(
+            [
+                'timetable_id' => $tt->timetable_id,
+                'date' => $todayDate,
+            ],
+            [
+                'teacher_id' => $tt->teacher_id,
+                'subject_id' => $tt->subject_id,
+                'status' => 'absent'
+            ]
+        );
+    }
+    $lessons = DB::table('teacher_attendances')
+        ->join('timetables','timetables.id','=','teacher_attendances.timetable_id')
+        ->join('subjects','subjects.id','=','timetables.subject_id')
+        ->join('timeslots','timeslots.id','=','timetables.timeslot_id')
+        ->join('days','days.id','=','timetables.day_id')
+        ->leftJoin('rooms','rooms.id','=','timetables.room_id')
+        ->leftJoin('teachers','teachers.id','=','timetables.teacher_id')
+
+        ->where('teacher_attendances.date', $todayDate)
+        ->where('subjects.course_id', $user->course_id)
+        ->where('subjects.nta_level', $user->nta)
+        ->where('subjects.semester_id', $user->semester_id) 
+
+        ->orderBy('timeslots.start_time')
+
+        ->select(
+            'timetables.id as timetable_id',
+            'days.day_name',
+            'timeslots.start_time',
+            'timeslots.end_time',
+            'subjects.subjectName',
+            'subjects.subjectCode',
+            'rooms.name as room_name',
+            'teacher_attendances.status',
+            'teachers.firstname',
+            'teachers.lastname'
+        )
         ->get();
 
     return view("lessons", compact("lessons"));

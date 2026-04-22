@@ -189,7 +189,7 @@
             </li>
             <li class="nav-item">
                 <a class="nav-link" data-bs-toggle="tab" href="#nonTeaching" role="tab">
-                    <i class="bi bi-calendar-x-fill me-1"></i> Non-Teaching Days
+                    <i class="bi bi-calendar-x-fill me-1"></i> Settings
                 </a>
             </li>
         </ul>
@@ -278,20 +278,22 @@
             <!-- NON TEACHING DAYS TAB -->
 <div class="tab-pane fade" id="nonTeaching" role="tabpanel">
     <div class="card p-3">
-        <h5 class="text-primary mb-3">Manage Non-Teaching Days</h5>
+        <h5 class="text-primary mb-3">System Settings</h5>
+        @if($timetable->status=="created")
+        <p style="color: green;font-style: italic">The timetable is diployed to the users</p>
+        @else
+        <p style="color: red;font-style: italic">The timetable now is disbaled due to under maintance</p>
 
-        <form action="{{ route('holidays.toggle') }}" method="POST">
+        @endif
+
+        <form method="POST" action="/timetable/enable">
             @csrf
-
-            <div class="mb-3">
-                <label class="form-label">Select Date</label>
-                <input type="date" name="date" class="form-control" required>
-            </div>
-
-            <button type="submit" class="btn btn-primary">
-                Pause / Activate Day
-            </button>
+            <button class="btn btn-success">Enable Timetable</button>
         </form>
+        <form method="POST" action="/timetable/disable">
+    @csrf
+    <button class="btn btn-danger">Disable Timetable</button>
+</form>
 
     </div>
 </div>

@@ -164,96 +164,102 @@ INSTITUTE OF PUBLIC AND ADMINISTRATION
 
 <div class="table-responsive">
 
-<table class="table table-hover">
+    @if(isset($holidayMessage))
+    <div class="alert alert-warning text-center">
+        {{ $holidayMessage }}
+    </div>
+    @else
+       <table class="table table-hover table-bordered">
 
-<thead>
+    <thead>
 
-<tr style="background:#0f2a44;color:white">
-<th colspan="100">My subjects Information</th>
-</tr>
+        <tr style="background:#0f2a44;color:white">
+            <th colspan="100" class="text-center">My Subjects Information</th>
+        </tr>
 
-<tr>
-<th>T/N</th>
-<th>Subject</th>
-<th>Code</th>
-<th>Timeslot</th>
-<th>Status</th>
-<th>Action</th>
-</tr>
+        <tr>
+            <th>T/N</th>
+            <th>Subject</th>
+            <th>Code</th>
+            <th>Timeslot</th>
+            <th>Room</th>
+            <th>Teacher</th>
+            <th>Status</th>
+            <th>Action</th>
+        </tr>
 
-</thead>
+    </thead>
 
-<tbody>
+    <tbody>
 
-@php $i = 1; @endphp
+        @php $i = 1; @endphp
 
-@forelse($lessons as $lesson)
+        @forelse($lessons as $lesson)
 
-<tr>
+        <tr>
 
-<td>{{ $i++ }}</td>
+            <td>{{ $i++ }}</td>
 
-<td>{{ $lesson->subject->subjectName }}</td>
+            <td>{{ $lesson->subjectName }}</td>
 
-<td>{{ $lesson->subject->subjectCode }}</td>
+            <td>{{ $lesson->subjectCode ?? '-' }}</td>
 
-<td>
-@if($lesson->timetable && $lesson->timetable->timeslot)
-{{ $lesson->timetable->timeslot->start_time }} -
-{{ $lesson->timetable->timeslot->end_time }}
-@else
-N/A
-@endif
-</td>
+            <td>
+                {{ $lesson->start_time }} - {{ $lesson->end_time }}
+            </td>
 
-<td>
+            <td>{{ $lesson->room_name ?? 'N/A' }}</td>
 
-@if($lesson->status == 'present')
-<span class="badge bg-success">Present</span>
-@else
-<span class="badge bg-danger">Absent</span>
-@endif
+            <td>
+                {{ $lesson->firstname ?? '' }} {{ $lesson->lastname ?? '' }}
+            </td>
 
-</td>
+            <td>
+                @if($lesson->status == 'present')
+                    <span class="badge bg-success">Present</span>
+                @else
+                    <span class="badge bg-danger">Absent</span>
+                @endif
+            </td>
 
-<td>
+            <td>
 
-@if($lesson->status == 'absent')
+                @if($lesson->status == 'absent')
 
-<button class="btn btn-success btn-sm"
-data-bs-toggle="modal"
-data-bs-target="#confirmPresentModal"
-data-id="{{ $lesson->timetable_id }}">
+                    <button class="btn btn-success btn-sm"
+                        data-bs-toggle="modal"
+                        data-bs-target="#confirmPresentModal"
+                        data-id="{{ $lesson->timetable_id }}">
 
-Attend
+                        Attend
+                    </button>
 
-</button>
+                @else
 
-@else
+                    <button class="btn btn-success btn-sm" disabled>
+                        Present
+                    </button>
 
-<button class="btn btn-success btn-sm" disabled>
-Present
-</button>
+                @endif
 
-@endif
+            </td>
 
-</td>
+        </tr>
 
-</tr>
+        @empty
 
-@empty
+        <tr>
+            <td colspan="100%" class="text-center">
+                No lessons available
+            </td>
+        </tr>
 
-<tr>
-<td colspan="100%" class="text-center">
-No lessons available
-</td>
-</tr>
+        @endforelse
 
-@endforelse
-
-</tbody>
+    </tbody>
 
 </table>
+    @endif
 
 </div>
 

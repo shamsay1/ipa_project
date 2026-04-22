@@ -4,10 +4,9 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class Holiday extends Model
+class SystemTimetable extends Model
 {
     protected $fillable = [
-        "name",
-        "date",
+        "status",
     ];
 }

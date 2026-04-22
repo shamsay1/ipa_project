@@ -189,121 +189,122 @@ INSTITUTES OF PUBLIC AND ADMINISTRATION
 </h4>
 
 <h4 style="color:green;text-align:center">
-Timetable for Teacher <?php echo e(Auth::user()->firstname); ?> <?php echo e(Auth::user()->lastname); ?>
+Timetable for Teacher <?php echo e(Auth::user()->firstname); ?> <?php echo e(Auth::user()->middlename); ?> <?php echo e(Auth::user()->lastname); ?>
 
 </h4>
 
 <table class="table table-hover table-bordered table-sm">
 
-<thead>
+            <thead>
 
-<tr style="background-color:#0f2a44;color:white">
-<th colspan="100" style="text-align:center">
-MY TIMETABLE
-</th>
-</tr>
+            <tr style="background-color:#0f2a44;color:white">
+            <th colspan="100" style="text-align:center">
+            MY TIMETABLE
+            </th>
+            </tr>
 
-<tr>
-<th>DAY / TIME</th>
+            <tr>
+            <th>DAY / TIME</th>
 
-<?php $__currentLoopData = $timetable['timeslots']; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $index => $slot): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+            <?php $__currentLoopData = $timetable['timeslots']; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $index => $slot): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
 
-<th style="font-size:11px;line-height:1.2">
+            <th style="font-size:11px;line-height:1.2">
 
-<div style="font-weight:bold;font-size: 20px;text-align: center">
-<?php echo e($index + 1); ?>
+            <div style="font-weight:bold;font-size: 20px;text-align: center">
+            <?php echo e($index + 1); ?>
 
-</div>
+            </div>
 
-<div style="font-size: 7px;text-align: center">
-<?php echo e(date('h:ia', strtotime($slot['start']))); ?>
+            <div style="font-size: 7px;text-align: center">
+            <?php echo e(date('h:ia', strtotime($slot['start']))); ?>
 
--
-<?php echo e(date('h:ia', strtotime($slot['end']))); ?>
+            -
+            <?php echo e(date('h:ia', strtotime($slot['end']))); ?>
 
-</div>
+            </div>
 
-</th>
+            </th>
 
-<?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
 
-</tr>
+            </tr>
 
-</thead>
+            </thead>
 
-<tbody>
+            <tbody>
 
-<?php $__currentLoopData = $timetable['entries']; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $day => $dayEntries): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-<tr>
-    <td style="font-weight:bold">
-        <?php echo e(strtoupper($day)); ?>
+            <?php $__currentLoopData = $timetable['entries']; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $day => $dayEntries): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+            <tr>
+                <td style="font-weight:bold">
+                    <?php echo e(strtoupper($day)); ?>
 
-    </td>
+                </td>
 
-    <?php $__currentLoopData = $timetable['timeslots']; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $slot): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-    <td>
+                <?php $__currentLoopData = $timetable['timeslots']; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $slot): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                <td>
 
-        <?php
-            // tafuta entry kwa timeslot hii
-            $found = $dayEntries
-                ->where('start_time', $slot['start'])
-                ->where('end_time', $slot['end'])
-                ->first();
-        ?>
+                    <?php
+                        // tafuta entry kwa timeslot hii
+                        $found = $dayEntries
+                            ->where('start_time', $slot['start'])
+                            ->where('end_time', $slot['end'])
+                            ->first();
+                    ?>
 
-        <?php if($found): ?>
+                    <?php if($found): ?>
 
-            <?php if($found->group_name): ?>
+                        <?php if($found->group_name): ?>
 
-                <strong>
-                    <?php echo e(strtoupper($found->group_name)); ?>
+                            <strong>
+                                <?php echo e(strtoupper($found->group_name)); ?>
 
-                </strong>
-                <br>
+                            </strong>
+                            <br>
 
-                
-                <?php
-                    $groupSubjects = collect();
-                    if(isset($groupCourses[$found->group_name])) {
-                        $groupSubjects = $groupCourses[$found->group_name];
-                    }
-                ?>
+                            
+                            <?php
+                                $groupSubjects = collect();
+                                if(isset($groupCourses[$found->group_name])) {
+                                    $groupSubjects = $groupCourses[$found->group_name];
+                                }
+                            ?>
 
-                <?php echo e(implode(' + ', $groupSubjects->toArray())); ?>
+                            <?php echo e(implode(' + ', $groupSubjects->toArray())); ?>
 
-                <br>
+                            <br>
 
-                ROOM: <?php echo e($found->room_name); ?>
-
-
-            <?php else: ?>
-
-                <strong>
-                    <?php echo e($found->subjectName); ?> (<?php echo e($found->subjectCode); ?>)
-                </strong>
-                <br>
-
-                <?php echo e($found->fullCourseName); ?> (<?php echo e($found->nta_level); ?>)
-                <br>
-
-                ROOM: <?php echo e($found->room_name); ?>
+                            ROOM: <?php echo e($found->room_name); ?>
 
 
-            <?php endif; ?>
+                        <?php else: ?>
 
-        <?php endif; ?>
+                            <strong>
+                                <?php echo e($found->subjectName); ?> (<?php echo e($found->subjectCode); ?>)
+                            </strong>
+                            <br>
 
-    </td>
-    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                            <?php echo e($found->fullCourseName); ?> (<?php echo e($found->nta_level); ?>)
+                            <br>
 
-</tr>
-<?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-
-</tbody>
+                            ROOM: <?php echo e($found->room_name); ?>
 
 
+                        <?php endif; ?>
 
-</table>
+                    <?php endif; ?>
+
+                </td>
+                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+
+            </tr>
+            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+
+            </tbody>
+
+
+
+            </table>
+
 
 </div>
 
@@ -315,7 +316,7 @@ MY TIMETABLE
 
                 data-timetable='<?php echo json_encode($timetable["entries"], 15, 512) ?>'
                 data-timeslots='<?php echo json_encode($timetable["timeslots"], 15, 512) ?>'
-                data-teacher="<?php echo e(Auth::user()->firstname); ?> <?php echo e(Auth::user()->lastname); ?>"
+                data-teacher="<?php echo e(Auth::user()->firstname); ?> <?php echo e(Auth::user()->middlename); ?> <?php echo e(Auth::user()->lastname); ?>"
                 >
 
                 <i class="fas fa-print"></i> Print Timetable

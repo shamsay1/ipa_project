@@ -41,7 +41,7 @@ Route::post('/teacher-attendance/store',
         ->name('teacher.attendance.store');
 
 
-
+Route::get("/message",[TimetableGeneratorController::class,"message"])->name("message");
 Route::get("/", [LoginController::class,"ShowLogin"])->name("again");
 Route::get('/login', [LoginController::class, 'ShowLogin'])->name('login');
 Route::post("/login",[LoginController::class,"Login"]);
@@ -62,8 +62,10 @@ Route::middleware(['auth:teacher', 'admin'])->group(function () {
 
     Route::get("/dash",[LoginController::class,"showDash"])->name("dash");
     Route::post('/sync-group-subjects',
-[TimetableGeneratorController::class,'syncGroupSubjects'])
-->name('sync.group.subjects');
+    [TimetableGeneratorController::class,'syncGroupSubjects'])
+    ->name('sync.group.subjects');
+    Route::post('/send-email', [TimetableGeneratorController::class, 'sendEmail'])
+    ->name('send.email');
     Route::resource("/teachers",TeacherController::class);
     Route::patch('teachers/{id}/block', [TeacherController::class, 'block'])->name('teachers.block');
     Route::patch('teachers/{id}/unblock', [TeacherController::class, 'unblock'])->name('teachers.unblock');
@@ -72,6 +74,8 @@ Route::middleware(['auth:teacher', 'admin'])->group(function () {
     Route::get("/adminprofile",[TeacherController::class,"adprofile"]);
     Route::get('/teacher/{id}/subjects', [TeacherController::class, 'viewtsub'])
     ->name('teacher.subjects');
+    Route::post("/timetable/enable",[TimetableGeneratorController::class,"enable"]);
+    Route::post("/timetable/disable",[TimetableGeneratorController::class,"disable"]);
 
 });
 
@@ -96,8 +100,7 @@ Route::middleware(['auth:teacher'])->group(function () {
     Route::get("/teachettbl",[TeacherController::class,"teacherTimetable"])->name("teachettbl");
 
     Route::get("/teachersub1",[TeacherController::class,"teachersubjects1"])->name("teachersub1");
-    Route::post('/holidays/toggle', [TeacherController::class, 'toggle'])
-    ->name('holidays.toggle');
+ 
 
     Route::get("/teachersub",[TeacherController::class,"teachersubject"])->name("teachersub");
     Route::post("/importt",[TeacherController::class,"TeacherImport"])->name("teacher.import");

@@ -11,10 +11,9 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('holidays', function (Blueprint $table) {
+        Schema::create('system_timetables', function (Blueprint $table) {
             $table->id();
-            $table->date("date");
-            $table->string("status")->default("Active");
+            $table->string("status")->default("not_created");
             $table->timestamps();
         });
     }
@@ -24,6 +23,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('holidays');
+        Schema::dropIfExists('system_timetables');
     }
 };

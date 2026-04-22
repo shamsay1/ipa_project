@@ -189,112 +189,113 @@ INSTITUTES OF PUBLIC AND ADMINISTRATION
 </h4>
 
 <h4 style="color:green;text-align:center">
-Timetable for Teacher {{ Auth::user()->firstname }} {{ Auth::user()->lastname }}
+Timetable for Teacher {{ Auth::user()->firstname }} {{ Auth::user()->middlename }} {{ Auth::user()->lastname }}
 </h4>
 
 <table class="table table-hover table-bordered table-sm">
 
-<thead>
+            <thead>
 
-<tr style="background-color:#0f2a44;color:white">
-<th colspan="100" style="text-align:center">
-MY TIMETABLE
-</th>
-</tr>
+            <tr style="background-color:#0f2a44;color:white">
+            <th colspan="100" style="text-align:center">
+            MY TIMETABLE
+            </th>
+            </tr>
 
-<tr>
-<th>DAY / TIME</th>
+            <tr>
+            <th>DAY / TIME</th>
 
-@foreach($timetable['timeslots'] as $index => $slot)
+            @foreach($timetable['timeslots'] as $index => $slot)
 
-<th style="font-size:11px;line-height:1.2">
+            <th style="font-size:11px;line-height:1.2">
 
-<div style="font-weight:bold;font-size: 20px;text-align: center">
-{{ $index + 1 }}
-</div>
+            <div style="font-weight:bold;font-size: 20px;text-align: center">
+            {{ $index + 1 }}
+            </div>
 
-<div style="font-size: 7px;text-align: center">
-{{ date('h:ia', strtotime($slot['start'])) }}
--
-{{ date('h:ia', strtotime($slot['end'])) }}
-</div>
+            <div style="font-size: 7px;text-align: center">
+            {{ date('h:ia', strtotime($slot['start'])) }}
+            -
+            {{ date('h:ia', strtotime($slot['end'])) }}
+            </div>
 
-</th>
+            </th>
 
-@endforeach
+            @endforeach
 
-</tr>
+            </tr>
 
-</thead>
+            </thead>
 
-<tbody>
+            <tbody>
 
-@foreach($timetable['entries'] as $day => $dayEntries)
-<tr>
-    <td style="font-weight:bold">
-        {{ strtoupper($day) }}
-    </td>
+            @foreach($timetable['entries'] as $day => $dayEntries)
+            <tr>
+                <td style="font-weight:bold">
+                    {{ strtoupper($day) }}
+                </td>
 
-    @foreach($timetable['timeslots'] as $slot)
-    <td>
+                @foreach($timetable['timeslots'] as $slot)
+                <td>
 
-        @php
-            // tafuta entry kwa timeslot hii
-            $found = $dayEntries
-                ->where('start_time', $slot['start'])
-                ->where('end_time', $slot['end'])
-                ->first();
-        @endphp
+                    @php
+                        // tafuta entry kwa timeslot hii
+                        $found = $dayEntries
+                            ->where('start_time', $slot['start'])
+                            ->where('end_time', $slot['end'])
+                            ->first();
+                    @endphp
 
-        @if($found)
+                    @if($found)
 
-            @if($found->group_name)
+                        @if($found->group_name)
 
-                <strong>
-                    {{ strtoupper($found->group_name) }}
-                </strong>
-                <br>
+                            <strong>
+                                {{ strtoupper($found->group_name) }}
+                            </strong>
+                            <br>
 
-                {{-- Group courses --}}
-                @php
-                    $groupSubjects = collect();
-                    if(isset($groupCourses[$found->group_name])) {
-                        $groupSubjects = $groupCourses[$found->group_name];
-                    }
-                @endphp
+                            {{-- Group courses --}}
+                            @php
+                                $groupSubjects = collect();
+                                if(isset($groupCourses[$found->group_name])) {
+                                    $groupSubjects = $groupCourses[$found->group_name];
+                                }
+                            @endphp
 
-                {{ implode(' + ', $groupSubjects->toArray()) }}
-                <br>
+                            {{ implode(' + ', $groupSubjects->toArray()) }}
+                            <br>
 
-                ROOM: {{ $found->room_name }}
+                            ROOM: {{ $found->room_name }}
 
-            @else
+                        @else
 
-                <strong>
-                    {{ $found->subjectName }} ({{ $found->subjectCode }})
-                </strong>
-                <br>
+                            <strong>
+                                {{ $found->subjectName }} ({{ $found->subjectCode }})
+                            </strong>
+                            <br>
 
-                {{ $found->fullCourseName }} ({{ $found->nta_level }})
-                <br>
+                            {{ $found->fullCourseName }} ({{ $found->nta_level }})
+                            <br>
 
-                ROOM: {{ $found->room_name }}
+                            ROOM: {{ $found->room_name }}
 
-            @endif
+                        @endif
 
-        @endif
+                    @endif
 
-    </td>
-    @endforeach
+                </td>
+                @endforeach
 
-</tr>
-@endforeach
+            </tr>
+            @endforeach
 
-</tbody>
+            </tbody>
 
 
 
-</table>
+            </table>
+
 
 </div>
 
@@ -306,7 +307,7 @@ MY TIMETABLE
 
                 data-timetable='@json($timetable["entries"])'
                 data-timeslots='@json($timetable["timeslots"])'
-                data-teacher="{{ Auth::user()->firstname }} {{ Auth::user()->lastname }}"
+                data-teacher="{{ Auth::user()->firstname }} {{ Auth::user()->middlename }} {{ Auth::user()->lastname }}"
                 >
 
                 <i class="fas fa-print"></i> Print Timetable

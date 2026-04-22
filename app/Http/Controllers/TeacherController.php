@@ -10,9 +10,12 @@ use App\Models\Course;
 use App\Models\Department;
 use App\Models\Holiday;
 use App\Models\Loggins;
+use App\Models\Semester;
 use App\Models\Subject;
+use App\Models\SystemTimetable;
 use App\Models\Teacher;
 use App\Models\TeacherAttendance;
+use App\Models\Timetable;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -255,7 +258,6 @@ public function TeacherImport(Request $request)
     // CHECK HOLIDAY
     $holiday = DB::table('holidays')
         ->where('date', $todayDate)
-        ->where('status', 'Paused')
         ->first();
 
     $showGraph = true;
@@ -602,7 +604,8 @@ public function TeacherImport(Request $request)
             return view("profile");
         }
         public function adprofile(){
-            return view("adminprofile");
+            $timetable = SystemTimetable::first();
+            return view("adminprofile",compact("timetable"));
         }
         public function updateProfile(Request $request)
 {
@@ -765,7 +768,7 @@ public function supervision()
         ->orderBy('timeslots.start_time')
         ->get();
 
-    // 🔥 Group by course -> NTA -> semester
+    
     $timetable = $entries
         ->groupBy('courseName')
         ->map(function ($course) {
@@ -788,7 +791,8 @@ public function teacherTimetable1()
     TIMETABLE ENTRIES
     =========================
     */
-
+    $today = Carbon::today();
+     $status = Semester::where("status","Active")->first();
     $timetableEntries = DB::table('timetables')
         ->join('subjects', 'timetables.subject_id', '=', 'subjects.id')
         ->join('courses', 'subjects.course_id', '=', 'courses.id')
@@ -809,12 +813,14 @@ public function teacherTimetable1()
             'subjects.group_name',
             'courses.short_name',
             'teachers.firstname',
+            'teachers.middlename',
             'teachers.lastname',
             'teachers.mobile',
             'rooms.name as room_name'
         )
         ->where('subjects.teacher_id', $teacher->id)
         ->where('semesters.status', 'Active')
+        ->where('timetables.status',"1")
         ->orderByRaw("FIELD(days.day_name,'Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday')")
         ->orderBy('timeslots.start_time')
         ->get()
@@ -918,7 +924,7 @@ public function teacherTimetable1()
         'entries' => $timetableEntries->groupBy('day_name')
     ];
 
-    return view('teachertbl1', compact('timetable','groupCourses'));
+    return view('teachertbl1', compact('timetable','groupCourses','status','today','teacher'));
 }
     public function teachersubjects1(){
         $teacher = Auth::user();

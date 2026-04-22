@@ -164,97 +164,105 @@ INSTITUTE OF PUBLIC AND ADMINISTRATION
 
 <div class="table-responsive">
 
-<table class="table table-hover">
+    <?php if(isset($holidayMessage)): ?>
+    <div class="alert alert-warning text-center">
+        <?php echo e($holidayMessage); ?>
 
-<thead>
+    </div>
+    <?php else: ?>
+       <table class="table table-hover table-bordered">
 
-<tr style="background:#0f2a44;color:white">
-<th colspan="100">My subjects Information</th>
-</tr>
+    <thead>
 
-<tr>
-<th>T/N</th>
-<th>Subject</th>
-<th>Code</th>
-<th>Timeslot</th>
-<th>Status</th>
-<th>Action</th>
-</tr>
+        <tr style="background:#0f2a44;color:white">
+            <th colspan="100" class="text-center">My Subjects Information</th>
+        </tr>
 
-</thead>
+        <tr>
+            <th>T/N</th>
+            <th>Subject</th>
+            <th>Code</th>
+            <th>Timeslot</th>
+            <th>Room</th>
+            <th>Teacher</th>
+            <th>Status</th>
+            <th>Action</th>
+        </tr>
 
-<tbody>
+    </thead>
 
-<?php $i = 1; ?>
+    <tbody>
 
-<?php $__empty_1 = true; $__currentLoopData = $lessons; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $lesson): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
+        <?php $i = 1; ?>
 
-<tr>
+        <?php $__empty_1 = true; $__currentLoopData = $lessons; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $lesson): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
 
-<td><?php echo e($i++); ?></td>
+        <tr>
 
-<td><?php echo e($lesson->subject->subjectName); ?></td>
+            <td><?php echo e($i++); ?></td>
 
-<td><?php echo e($lesson->subject->subjectCode); ?></td>
+            <td><?php echo e($lesson->subjectName); ?></td>
 
-<td>
-<?php if($lesson->timetable && $lesson->timetable->timeslot): ?>
-<?php echo e($lesson->timetable->timeslot->start_time); ?> -
-<?php echo e($lesson->timetable->timeslot->end_time); ?>
+            <td><?php echo e($lesson->subjectCode ?? '-'); ?></td>
 
-<?php else: ?>
-N/A
-<?php endif; ?>
-</td>
+            <td>
+                <?php echo e($lesson->start_time); ?> - <?php echo e($lesson->end_time); ?>
 
-<td>
+            </td>
 
-<?php if($lesson->status == 'present'): ?>
-<span class="badge bg-success">Present</span>
-<?php else: ?>
-<span class="badge bg-danger">Absent</span>
-<?php endif; ?>
+            <td><?php echo e($lesson->room_name ?? 'N/A'); ?></td>
 
-</td>
+            <td>
+                <?php echo e($lesson->firstname ?? ''); ?> <?php echo e($lesson->lastname ?? ''); ?>
 
-<td>
+            </td>
 
-<?php if($lesson->status == 'absent'): ?>
+            <td>
+                <?php if($lesson->status == 'present'): ?>
+                    <span class="badge bg-success">Present</span>
+                <?php else: ?>
+                    <span class="badge bg-danger">Absent</span>
+                <?php endif; ?>
+            </td>
 
-<button class="btn btn-success btn-sm"
-data-bs-toggle="modal"
-data-bs-target="#confirmPresentModal"
-data-id="<?php echo e($lesson->timetable_id); ?>">
+            <td>
 
-Attend
+                <?php if($lesson->status == 'absent'): ?>
 
-</button>
+                    <button class="btn btn-success btn-sm"
+                        data-bs-toggle="modal"
+                        data-bs-target="#confirmPresentModal"
+                        data-id="<?php echo e($lesson->timetable_id); ?>">
 
-<?php else: ?>
+                        Attend
+                    </button>
 
-<button class="btn btn-success btn-sm" disabled>
-Present
-</button>
+                <?php else: ?>
 
-<?php endif; ?>
+                    <button class="btn btn-success btn-sm" disabled>
+                        Present
+                    </button>
 
-</td>
+                <?php endif; ?>
 
-</tr>
+            </td>
 
-<?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
+        </tr>
 
-<tr>
-<td colspan="100%" class="text-center">
-No lessons available
-</td>
-</tr>
+        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
 
-<?php endif; ?>
+        <tr>
+            <td colspan="100%" class="text-center">
+                No lessons available
+            </td>
+        </tr>
 
-</tbody>
+        <?php endif; ?>
+
+    </tbody>
 
 </table>
+    <?php endif; ?>
 
 </div>
 
