@@ -175,7 +175,7 @@ INSTITUTE OF PUBLIC AND ADMINISTRATION
     <thead>
 
         <tr style="background:#0f2a44;color:white">
-            <th colspan="100" class="text-center">My Subjects Information</th>
+            <th colspan="100" class="text-center">Today's Lessons</th>
         </tr>
 
         <tr>
@@ -187,6 +187,7 @@ INSTITUTE OF PUBLIC AND ADMINISTRATION
             <th>Teacher</th>
             <th>Status</th>
             <th>Action</th>
+            <th>Emergency</th>
         </tr>
 
     </thead>
@@ -220,6 +221,8 @@ INSTITUTE OF PUBLIC AND ADMINISTRATION
             <td>
                 <?php if($lesson->status == 'present'): ?>
                     <span class="badge bg-success">Present</span>
+                <?php elseif($lesson->status == 'emergency'): ?>
+                    <span class="badge bg-info">Emergency</span>
                 <?php else: ?>
                     <span class="badge bg-danger">Absent</span>
                 <?php endif; ?>
@@ -227,25 +230,43 @@ INSTITUTE OF PUBLIC AND ADMINISTRATION
 
             <td>
 
-                <?php if($lesson->status == 'absent'): ?>
+<?php if($lesson->status == 'absent'): ?>
 
-                    <button class="btn btn-success btn-sm"
-                        data-bs-toggle="modal"
-                        data-bs-target="#confirmPresentModal"
-                        data-id="<?php echo e($lesson->timetable_id); ?>">
+    <!-- Attend -->
+    <button class="btn btn-success btn-sm"
+        data-bs-toggle="modal"
+        data-bs-target="#confirmPresentModal"
+        data-id="<?php echo e($lesson->timetable_id); ?>">
+        Attend
+    </button>
 
-                        Attend
-                    </button>
+   
 
-                <?php else: ?>
 
-                    <button class="btn btn-success btn-sm" disabled>
-                        Present
-                    </button>
+<?php else: ?>
 
-                <?php endif; ?>
+    <button class="btn btn-success btn-sm" disabled>
+        Present
+    </button>
 
-            </td>
+<?php endif; ?>
+
+</td>
+<td>
+    <?php if($lesson->status == 'present'): ?>
+    <button class="btn btn-success btn-sm" disabled>
+        Present
+    </button>
+    <?php else: ?>
+    <button class="btn btn-warning btn-sm"
+        data-bs-toggle="modal"
+        data-bs-target="#emergencyModal"
+        data-id="<?php echo e($lesson->timetable_id); ?>">
+        Emergency
+    </button>
+    <?php endif; ?>
+</td>
+
 
         </tr>
 
@@ -265,12 +286,135 @@ INSTITUTE OF PUBLIC AND ADMINISTRATION
     <?php endif; ?>
 
 </div>
+<hr>
+
+<div class="table-responsive mt-4">
+
+    <h4 class="text-center" style="color:red; font-weight:bold;">
+        Emergency Lessons (Pending Make-Up)
+    </h4>
+
+    <table class="table table-bordered table-hover">
+
+        <thead style="background:#8b0000; color:white;">
+            <tr>
+                <th>#</th>
+                <th>Subject</th>
+                <th>Code</th>
+                <th>Teacher</th>
+                <th>NTA</th>
+                <th>Emergency Date</th>
+                <th>Days Remaining</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+
+        <tbody>
+
+        <?php $__empty_1 = true; $__currentLoopData = $emergencyLessons; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $index => $lesson): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
+
+            <?php
+                $daysPassed = (int) \Carbon\Carbon::parse($lesson->date)->diffInDays(now());
+                $daysRemaining = 5 - $daysPassed;
+            ?>
+
+            <tr>
+
+                <td><?php echo e($index + 1); ?></td>
+
+                <td><?php echo e($lesson->subjectName); ?></td>
+
+                <td><?php echo e($lesson->subjectCode ?? '-'); ?></td>
+
+                <td>
+                    <?php echo e($lesson->firstname); ?> <?php echo e($lesson->lastname); ?>
+
+                </td>
+
+               
+
+                <td><?php echo e($lesson->nta_level); ?></td>
+
+                <td>
+                    <?php echo e(\Carbon\Carbon::parse($lesson->date)->format('d M Y')); ?>
+
+                </td>
+
+                <td>
+                    <?php if($daysRemaining > 0): ?>
+                        <span class="badge bg-warning text-dark">
+                            <?php echo e($daysRemaining); ?> days left
+                        </span>
+                    
+                    <?php endif; ?>
+                </td>
+                <td>
+                    <button 
+                        class="btn btn-success btn-sm"
+                        data-bs-toggle="modal"
+                        data-bs-target="#confirmPresentModal"
+                        data-id="<?php echo e($lesson->timetable_id); ?>">
+                        Mark Present
+                    </button>
+                </td>
+
+            </tr>
+
+        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
+
+            <tr>
+                <td colspan="100%" class="text-center text-muted">
+                    No emergency lessons for your course and NTA
+                </td>
+            </tr>
+
+        <?php endif; ?>
+
+        </tbody>
+
+    </table>
+
+</div>
+
 
 </div>
 
 </section>
 
 </div>
+
+
+<div class="modal fade" id="emergencyModal" tabindex="-1">
+<div class="modal-dialog">
+<div class="modal-content">
+
+<div class="modal-header">
+<h5 class="modal-title">Mark Emergency</h5>
+<button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+</div>
+
+<form action="<?php echo e(route('teacher.emergency')); ?>" method="POST">
+<?php echo csrf_field(); ?>
+
+<div class="modal-body">
+
+<input type="hidden" name="timetable_id" id="emergency_timetable_id">
+
+
+</div>
+
+<div class="modal-footer">
+<button type="submit" class="btn btn-warning">
+Confirm Emergency
+</button>
+</div>
+
+</form>
+
+</div>
+</div>
+</div>
+
 
 <!-- MODAL -->
 
@@ -349,6 +493,22 @@ document.getElementById('modal_timetable_id').value = id;
 });
 
 </script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+    var emergencyModal = document.getElementById('emergencyModal');
+
+    emergencyModal.addEventListener('show.bs.modal', function (event) {
+
+        var button = event.relatedTarget;
+        var id = button.getAttribute('data-id');
+
+        document.getElementById('emergency_timetable_id').value = id;
+    });
+
+});
+</script>
+
 
 </body>
 </html><?php /**PATH C:\Users\PC\Documents\Timetable\resources\views/lessons.blade.php ENDPATH**/ ?>

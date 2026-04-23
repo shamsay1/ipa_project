@@ -165,7 +165,7 @@
                 <div class="col mr-2">
                     <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
                         TOTAL DEPARTMENT</div>
-                    <div class="h5 mb-0 font-weight-bold text-gray-800 stat-number">4</div>
+                    <div class="h5 mb-0 font-weight-bold text-gray-800 stat-number">3</div>
                 </div>
                 <div class="col-auto">
                     <i class="bi bi-building-fill-gear card-icon text-warning"></i>
@@ -184,9 +184,20 @@
 
 <h5 class="mb-4 text-center">Today's Teaching Performance Per Course</h5>
 
-<div style="width:100%; height:400px;">
+<div style="width:100%; height:400px;" class="mb-3">
     <canvas id="courseChart"></canvas>
 </div>
+
+
+
+    
+    <h2 style="color: green;text-align: center;font-family: 'Times New Roman', Times, serif">Course Code Meanings</h2>
+            @foreach($coursesData as $course)
+                
+                    <strong>{{ $course->course_code }}</strong><span>= {{ $course->courseName }}</span><br>
+                
+            @endforeach
+
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
@@ -243,6 +254,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
 });
 </script>
+
+
 
 @else
 

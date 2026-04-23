@@ -37,7 +37,7 @@ class StudentImport implements ToModel, WithHeadingRow, SkipsOnFailure, SkipsEmp
         'lastname'    => $row['lastname'],
         'email'       => $row['email'],
         'mobile'      => $row['mobile'],
-        'password'    => Hash::make(trim($row['password'])),
+        'password' => trim($row['password']),
         'course_id'   => $course ? $course->id : null,
         'semester_id' => $semester ? $semester->id : null,
         'nta'         => $row['nta_level'],

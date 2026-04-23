@@ -255,7 +255,7 @@ public function TeacherImport(Request $request)
     $todayDate = Carbon::today()->toDateString();
     $todayName = Carbon::now()->format('l');
 
-    // CHECK HOLIDAY
+    
     $holiday = DB::table('holidays')
         ->where('date', $todayDate)
         ->first();
@@ -319,7 +319,8 @@ public function TeacherImport(Request $request)
         'labels',
         'taughtData',
         'notTaughtData',
-        'showGraph'
+        'showGraph',
+        'coursesData'
     ));
 }
 
@@ -605,7 +606,8 @@ public function TeacherImport(Request $request)
         }
         public function adprofile(){
             $timetable = SystemTimetable::first();
-            return view("adminprofile",compact("timetable"));
+            $teacher = Auth::guard('teacher')->user();
+            return view("adminprofile",compact("timetable","teacher"));
         }
         public function updateProfile(Request $request)
 {
@@ -632,6 +634,7 @@ public function TeacherImport(Request $request)
 
     return back()->with('success', 'Profile updated successfully!');
 }
+
 
 
     // Change Password
@@ -949,53 +952,19 @@ public function teacherTimetable1()
         return view("teachersubjects1",compact("subjects"));
     }
 
-   public function toggle(Request $request)
+   
+
+    public function markEmergency(Request $request)
 {
-    $request->validate([
-        'date' => 'required|date'
-    ]);
-
-    $holiday = Holiday::where('date', $request->date)->first();
-
-    
-    if (!$holiday) {
-
-        Holiday::create([
-            'date' => $request->date,
-            'status' => 'Paused'
+    DB::table('teacher_attendances')
+        ->where('timetable_id', $request->timetable_id)
+        ->update([
+            'status' => 'emergency',
         ]);
-        TeacherAttendance::where('date', $request->date)->delete();
 
-        return back()->with('success', 'Day paused and attendances removed');
-
-    } else {
-
-        
-        if ($holiday->status == "Paused") {
-
-            $holiday->update([
-                'status' => 'Active'
-            ]);
-
-            return back()->with('success', 'Day activated');
-
-        }
-
-        // kama ipo na Active
-        if ($holiday->status == "Active") {
-
-            $holiday->update([
-                'status' => 'Paused'
-            ]);
-
-            // Futa attendance za tarehe hiyo
-            TeacherAttendance::where('date', $request->date)->delete();
-
-            return back()->with('success', 'Day paused and attendances removed');
-
-        }
-    }
+    return back()->with('success', 'Lesson marked as emergency');
 }
+
 
 
 }

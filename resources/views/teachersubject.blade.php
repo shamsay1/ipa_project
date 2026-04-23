@@ -185,7 +185,7 @@
         <li class="ms-auto">
             <form method="POST" action="{{ route('logout') }}" class="mb-0">
                 @csrf
-                <button type="submit">
+                 <button type="submit" style="padding: 5px;background-color: #c9a227;border-radius: 5px;color: white;border: none;cursor: pointer">
                     <i class="bi bi-box-arrow-right me-1"></i> Logout
                 </button>
             </form>

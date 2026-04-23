@@ -187,11 +187,13 @@
                     <i class="bi bi-lock-fill me-1"></i> Change Password
                 </a>
             </li>
+            @if($teacher->user_level=="admin")
             <li class="nav-item">
                 <a class="nav-link" data-bs-toggle="tab" href="#nonTeaching" role="tab">
                     <i class="bi bi-calendar-x-fill me-1"></i> Settings
                 </a>
             </li>
+            @endif
         </ul>
 
         <!-- Tab Contents -->
@@ -275,7 +277,7 @@
                     </form>
                 </div>
             </div>
-            <!-- NON TEACHING DAYS TAB -->
+           
 <div class="tab-pane fade" id="nonTeaching" role="tabpanel">
     <div class="card p-3">
         <h5 class="text-primary mb-3">System Settings</h5>
@@ -297,6 +299,7 @@
 
     </div>
 </div>
+
         </div>
     </div>
 </div>

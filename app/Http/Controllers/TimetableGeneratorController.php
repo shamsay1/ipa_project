@@ -109,8 +109,8 @@ public function generateTimetable(Request $request)
         ini_set('memory_limit', '1024M');
         ignore_user_abort(true);
 
-        $this->solveConflictsInternal();
-        $this->solveConflicts($request);
+        // $this->solveConflictsInternal();
+        // $this->solveConflicts($request);
 
         /******************************************************
          * 5. RETURN FINAL TIMETABLE
@@ -132,181 +132,182 @@ public function generateTimetable(Request $request)
 }
 
 // INTERNAL CONFLICT SOLVER (NO REDIRECT, NO OUTPUT)
-    private function solveConflictsInternal()
-{
-    $maxLoops = 10;
+//     private function solveConflictsInternal()
+// {
+//     $maxLoops = 10;
 
-    for ($loop = 0; $loop < $maxLoops; $loop++) {
+//     for ($loop = 0; $loop < $maxLoops; $loop++) {
 
-        $conflictFound = false;
+//         $conflictFound = false;
 
-        $subjects = DB::table('subjects')->get();
+//         $subjects = DB::table('subjects')->get();
 
-        $days = DB::table('days')
-            ->orderByRaw("FIELD(day_name,'Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday')")
-            ->get();
+//         $days = DB::table('days')
+//             ->orderByRaw("FIELD(day_name,'Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday')")
+//             ->get();
 
-        $slots = DB::table('timeslots')->orderBy('start_time')->get();
+//         $slots = DB::table('timeslots')->orderBy('start_time')->get();
 
-        $weekdayUsage = []; // track used days per course
-        $dailyCount = [];   // track vipindi per day
+//         $weekdayUsage = []; // track used days per course
+//         $dailyCount = [];   // track vipindi per day
 
-        // GROUP subjects
-        $groupedSubjects = $subjects->groupBy(function ($s) {
-            return $s->course_id . '_' . $s->nta_level . '_' . $s->semester_id . (!empty($s->group_name) ? '_group_'.$s->group_name : '_single');
-        });
+//         // GROUP subjects
+//         $groupedSubjects = $subjects->groupBy(function ($s) {
+//             return $s->course_id . '_' . $s->nta_level . '_' . $s->semester_id . (!empty($s->group_name) ? '_group_'.$s->group_name : '_single');
+//         });
 
-        foreach ($groupedSubjects as $groupName => $groupSubjects) {
+//         foreach ($groupedSubjects as $groupName => $groupSubjects) {
 
-            $subject = $groupSubjects->first();
-            $course = DB::table('courses')->where('id',$subject->course_id)->first();
-            if (!$course) continue;
+//             $subject = $groupSubjects->first();
+//             $course = DB::table('courses')->where('id',$subject->course_id)->first();
+//             if (!$course) continue;
 
-            $level = strtolower($course->course_level);
-            $isGroup = $groupSubjects->count() > 1 && !empty($subject->group_name);
+//             $level = strtolower($course->course_level);
+//             $isGroup = $groupSubjects->count() > 1 && !empty($subject->group_name);
 
-            $weekdayKey = $subject->course_id.'_'.$subject->nta_level.'_'.$subject->semester_id;
+//             $weekdayKey = $subject->course_id.'_'.$subject->nta_level.'_'.$subject->semester_id;
 
-            // 🎯 DEGREE: choose ONLY 2-3 weekdays
-            if ($level == 'degree' && !isset($weekdayUsage[$weekdayKey])) {
-                $weekdayDays = $days->filter(function($d){
-                    return !in_array(strtolower($d->day_name), ['saturday','sunday']);
-                })->pluck('id')->toArray();
+//             // 🎯 DEGREE: choose ONLY 2-3 weekdays
+//             if ($level == 'degree' && !isset($weekdayUsage[$weekdayKey])) {
+//                 $weekdayDays = $days->filter(function($d){
+//                     return !in_array(strtolower($d->day_name), ['saturday','sunday']);
+//                 })->pluck('id')->toArray();
 
-                shuffle($weekdayDays);
-                $weekdayUsage[$weekdayKey] = array_slice($weekdayDays, 0, rand(2,3));
-            }
+//                 shuffle($weekdayDays);
+//                 $weekdayUsage[$weekdayKey] = array_slice($weekdayDays, 0, rand(2,3));
+//             }
 
-            $slotsNeeded = [2,1]; // total = 3
+//             $slotsNeeded = [2,1]; // total = 3
 
-            foreach ($slotsNeeded as $count) {
+//             foreach ($slotsNeeded as $count) {
 
-                $placed = false;
+//                 $placed = false;
 
-                foreach ($days as $day) {
+//                 foreach ($days as $day) {
 
-                    $dayName = strtolower($day->day_name);
-                    $isWeekend = in_array($dayName, ['saturday','sunday']);
+//                     $dayName = strtolower($day->day_name);
+//                     $isWeekend = in_array($dayName, ['saturday','sunday']);
 
-                    // 🎯 DEGREE RULES
-                    if ($level == 'degree') {
+//                     // 🎯 DEGREE RULES
+//                     if ($level == 'degree') {
 
-                        $allowedDays = $weekdayUsage[$weekdayKey];
+//                         $allowedDays = $weekdayUsage[$weekdayKey];
 
-                        // weekday must be selected days only
-                        if (!$isWeekend && !in_array($day->id, $allowedDays)) {
-                            continue;
-                        }
+//                         // weekday must be selected days only
+//                         if (!$isWeekend && !in_array($day->id, $allowedDays)) {
+//                             continue;
+//                         }
 
-                        // slots filter
-                        $candidateSlots = $slots->filter(function($s) use ($isWeekend){
-                            $hour = intval(explode(':',$s->start_time)[0]);
+//                         // slots filter
+//                         $candidateSlots = $slots->filter(function($s) use ($isWeekend){
+//                             $hour = intval(explode(':',$s->start_time)[0]);
 
-                            if ($isWeekend) {
-                                return $hour >= 8; // weekend
-                            } else {
-                                return $hour >= 16; // weekday 16:00+
-                            }
-                        });
+//                             if ($isWeekend) {
+//                                 return $hour >= 8; // weekend
+//                             } else {
+//                                 return $hour >= 16; // weekday 16:00+
+//                             }
+//                         });
 
-                    } else {
-                        $candidateSlots = $slots;
-                    }
+//                     } else {
+//                         $candidateSlots = $slots;
+//                     }
 
-                    $candidateSlots = $candidateSlots->values();
+//                     $candidateSlots = $candidateSlots->values();
 
-                    for ($i=0;$i<count($candidateSlots);$i++) {
+//                     for ($i=0;$i<count($candidateSlots);$i++) {
 
-                        if ($count == 2) {
-                            if (!isset($candidateSlots[$i+1])) continue;
-                            $targetSlots = [$candidateSlots[$i]->id,$candidateSlots[$i+1]->id];
-                        } else {
-                            $targetSlots = [$candidateSlots[$i]->id];
-                        }
+//                         if ($count == 2) {
+//                             if (!isset($candidateSlots[$i+1])) continue;
+//                             $targetSlots = [$candidateSlots[$i]->id,$candidateSlots[$i+1]->id];
+//                         } else {
+//                             $targetSlots = [$candidateSlots[$i]->id];
+//                         }
 
-                        // 🚫 DAILY LIMIT (max 3)
-                        $dailyKey = $weekdayKey.'_'.$day->id;
-                        $currentCount = $dailyCount[$dailyKey] ?? 0;
+//                         // 🚫 DAILY LIMIT (max 3)
+//                         $dailyKey = $weekdayKey.'_'.$day->id;
+//                         $currentCount = $dailyCount[$dailyKey] ?? 0;
 
-                        if ($currentCount + $count > 3 && $level == 'degree' && !$isWeekend) {
-                            continue;
-                        }
+//                         if ($currentCount + $count > 3 && $level == 'degree' && !$isWeekend) {
+//                             continue;
+//                         }
 
-                        // 🎯 ROOM: MUST USE course_rooms
-                        $courseRoomIds = DB::table('course_rooms')
-                            ->where('course_id',$subject->course_id)
-                            ->where('nta_level',$subject->nta_level)
-                            ->pluck('room_id')->toArray();
+//                         // 🎯 ROOM: MUST USE course_rooms
+//                         $courseRoomIds = DB::table('course_rooms')
+//                             ->where('course_id',$subject->course_id)
+//                             ->where('nta_level',$subject->nta_level)
+//                             ->pluck('room_id')->toArray();
 
-                        if (empty($courseRoomIds)) continue;
+//                         if (empty($courseRoomIds)) continue;
 
-                        $rooms = DB::table('rooms')
-                            ->whereIn('id',$courseRoomIds)
-                            ->inRandomOrder()
-                            ->get();
+//                         $rooms = DB::table('rooms')
+//                             ->whereIn('id',$courseRoomIds)
+//                             ->inRandomOrder()
+//                             ->get();
 
-                        foreach ($rooms as $room) {
+//                         foreach ($rooms as $room) {
 
-                            // ROOM conflict
-                            $roomBusy = DB::table('timetables')
-                                ->where('day_id',$day->id)
-                                ->whereIn('timeslot_id',$targetSlots)
-                                ->where('room_id',$room->id)
-                                ->exists();
+//                             // ROOM conflict
+//                             $roomBusy = DB::table('timetables')
+//                                 ->where('day_id',$day->id)
+//                                 ->whereIn('timeslot_id',$targetSlots)
+//                                 ->where('room_id',$room->id)
+//                                 ->exists();
 
-                            if ($roomBusy) continue;
+//                             if ($roomBusy) continue;
 
-                            // TEACHER conflict
-                            $teacherConflict = false;
-                            foreach ($groupSubjects as $gs) {
-                                $busy = DB::table('timetables')
-                                    ->where('day_id',$day->id)
-                                    ->whereIn('timeslot_id',$targetSlots)
-                                    ->where('teacher_id',$gs->teacher_id)
-                                    ->exists();
+//                             // TEACHER conflict
+//                             $teacherConflict = false;
+//                             foreach ($groupSubjects as $gs) {
+//                                 $busy = DB::table('timetables')
+//                                     ->where('day_id',$day->id)
+//                                     ->whereIn('timeslot_id',$targetSlots)
+//                                     ->where('teacher_id',$gs->teacher_id)
+//                                     ->exists();
 
-                                if ($busy) {
-                                    $teacherConflict = true;
-                                    break;
-                                }
-                            }
+//                                 if ($busy) {
+//                                     $teacherConflict = true;
+//                                     break;
+//                                 }
+//                             }
 
-                            if ($teacherConflict) continue;
+//                             if ($teacherConflict) continue;
 
-                            // ✅ INSERT
-                            foreach ($groupSubjects as $gs) {
-                                foreach ($targetSlots as $ts) {
-                                    DB::table('timetables')->insert([
-                                        'subject_id'=>$gs->id,
-                                        'teacher_id'=>$gs->teacher_id,
-                                        'day_id'=>$day->id,
-                                        'timeslot_id'=>$ts,
-                                        'room_id'=>$room->id,
-                                        'created_at'=>now(),
-                                        'updated_at'=>now()
-                                    ]);
-                                }
-                            }
+//                             // ✅ INSERT
+//                             foreach ($groupSubjects as $gs) {
+//                                 foreach ($targetSlots as $ts) {
+//                                     DB::table('timetables')->insert([
+//                                         'subject_id'=>$gs->id,
+//                                         'teacher_id'=>$gs->teacher_id,
+//                                         'day_id'=>$day->id,
+//                                         'timeslot_id'=>$ts,
+//                                         'semester_id' => $gs->semester_id,
+//                                         'room_id'=>$room->id,
+//                                         'created_at'=>now(),
+//                                         'updated_at'=>now()
+//                                     ]);
+//                                 }
+//                             }
 
-                            // update counters
-                            $dailyCount[$dailyKey] = $currentCount + $count;
+//                             // update counters
+//                             $dailyCount[$dailyKey] = $currentCount + $count;
 
-                            $placed = true;
-                            $conflictFound = true;
-                            break 3;
-                        }
-                    }
-                }
+//                             $placed = true;
+//                             $conflictFound = true;
+//                             break 3;
+//                         }
+//                     }
+//                 }
 
-                if (!$placed) {
-                    Log::warning("Failed placing subject group ".$groupName);
-                }
-            }
-        }
+//                 if (!$placed) {
+//                     Log::warning("Failed placing subject group ".$groupName);
+//                 }
+//             }
+//         }
 
-        if (!$conflictFound) break;
-    }
-}
+//         if (!$conflictFound) break;
+//     }
+// }
 
     
     private function getTimetableData()
@@ -572,6 +573,8 @@ foreach ($groupedSubjects as $item) {
         $semesterRoman = 'I';
     } elseif (str_contains($semester, '2')) {
         $semesterRoman = 'II';
+    }elseif (str_contains($semester, '3')) {
+        $semesterRoman = 'III';
     }
     $shortCourse = $prefix . $item->short_name.' ' . $semesterRoman;
      $courseName = $item->courseName;
@@ -951,7 +954,7 @@ public function solveNtaDoubleBooking()
 
     foreach ($conflicts as $conflict) {
 
-        // ❗ CHAGUA TU RECORD ISIYO NA GROUP
+        
         if (is_null($conflict->g1)) {
             $moveId = $conflict->t1_id;
         } elseif (is_null($conflict->g2)) {
@@ -963,7 +966,7 @@ public function solveNtaDoubleBooking()
         $record = DB::table('timetables')->where('id',$moveId)->first();
         if (!$record) continue;
 
-        // ❗ DOUBLE CHECK (SAFETY)
+        
         if ($record->group_name !== null) continue;
 
         $subject = DB::table('subjects')->where('id',$record->subject_id)->first();
@@ -977,7 +980,7 @@ public function solveNtaDoubleBooking()
 
         $moved = false;
 
-        // ===== TRY SAME DAY (CONSECUTIVE) =====
+        
         foreach ($subjectDays as $dayId => $lessons) {
 
             if (count($lessons) >= 2) continue;
@@ -1043,7 +1046,7 @@ public function solveNtaDoubleBooking()
 
         if ($moved) continue;
 
-        // ===== FALLBACK =====
+       
         $slots = DB::table('timeslots as ts')
             ->crossJoin('days as d')
             ->select('ts.id as timeslot_id','d.id as day_id')
@@ -1093,7 +1096,7 @@ public function solveNtaDoubleBooking()
         }
     }
 
-    return back()->with('success','Solved (group protected) ✅');
+    return back()->with('success','Solved (group protected)');
 }
 public function showedit($id){
     $timetable=Timetable::findOrFail($id);
@@ -1382,9 +1385,6 @@ public function checkSolutions(Request $request)
 
                 $hasConflict = false;
 
-                // ==========================
-                // 🔥 CHECK CONFLICT FOR ALL GROUP SUBJECTS
-                // ==========================
                 foreach ($groupSubjects as $gSubject) {
 
                     $conflict = DB::table('timetables AS t')
@@ -2093,7 +2093,8 @@ public function syncGroupSubjects()
             return back()->with('success', 'Timetable disabled');
         }
         public function message(){
-            return view("message");
+            $admin = Teacher::where("user_level","admin")->first();
+            return view("message",compact("admin"));
         }
         
 

@@ -257,14 +257,14 @@ function printReport() {
 
     const table = document.querySelector(".table").outerHTML;
 
-    // 🔹 Get selected course short name
+    
     let courseShortName = "<?php echo e($selectedCourse ? $courses->where('id',$selectedCourse)->first()->short_name ?? 'ALL' : 'ALL'); ?>";
     let start_date = formatDate(<?php echo json_encode($startDate ?? '', 15, 512) ?>);
     let end_date = formatDate(<?php echo json_encode($endDate ?? '', 15, 512) ?>);
     let ntaLevel = "<?php echo e($selectedNta ?? 'ALL NTA'); ?>";
     let semester = "<?php echo e($selectedSemester ? $semesters->where('id',$selectedSemester)->first()->semName ?? '' : ''); ?>";
 
-    // 🔹 Determine NTA prefix
+    
     let ntaPrefix = '';
     switch (ntaLevel) {
         case "NTA-4": ntaPrefix = 'BTC'; break;
@@ -275,7 +275,7 @@ function printReport() {
         default: ntaPrefix = '';
     }
 
-    // 🔹 Determine semester in Roman numeral
+    
     let semesterRoman = '';
     if (semester.includes('1')) {
         semesterRoman = 'I';
@@ -283,7 +283,7 @@ function printReport() {
         semesterRoman = 'II';
     }
 
-    // 🔹 Construct file name using course short name + NTA prefix + Semester
+    
     let fileName = `Subject_report_${ntaPrefix}${courseShortName}_${semesterRoman}.pdf`;
 
     const printWindow = window.open('', '', 'width=1000,height=800');

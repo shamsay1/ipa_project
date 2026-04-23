@@ -110,15 +110,7 @@
         </button>
     </div>
 
-    <div class="col-md-6">
-        <!-- Search Box -->
-        <div class="input-group">
-            <input type="text" class="form-control" placeholder="Search">
-            <button class="btn btn-outline-secondary" type="button">
-                <i class="bi bi-search"></i>
-            </button>
-        </div>
-    </div>
+    
 </div>
 
 <!-- Modal for Adding Teacher -->

@@ -110,7 +110,7 @@
             <div class="alert alert-dismissible fade show flash-message" role="alert">
   <div class="d-flex align-items-center">
     <i class="bi bi-check-circle-fill me-2"></i> <div class="flex-grow-1">
-      <h6 class="alert-heading mb-1"> Edit Teachers Information</h6>
+      <h6 class="alert-heading mb-1"> Edit Class Information</h6>
       <p class="mb-0" style="color: green">{{ session('success') }}</p>
     </div>
     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>

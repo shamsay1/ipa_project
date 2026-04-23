@@ -210,8 +210,7 @@
             <select name="room_id" id="room_id" class="form-control" oninput="checkConflicts()">
                 <?php $__currentLoopData = $rooms; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $room): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                 <option value="<?php echo e($room->id); ?>" <?php echo e($timetable->room_id == $room->id ? "selected" : ""); ?>>
-                    <?php echo e($room->name); ?>
-
+                    <?php echo e($room->name); ?> 
                 </option>
                 <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
             </select>
@@ -292,7 +291,7 @@ function loadSolutions() {
             });
         }
 
-        // ✅ HAPA TUNA CHECK CONFLICTS KWA UPDATE BUTTON
+        
         checkConflictsForButton();
     });
 }
@@ -322,9 +321,7 @@ function checkConflictsForButton() {
     .then(res => res.json())
     .then(data => {
         const btn = document.getElementById('btnUpdate');
-        btn.disabled = !data.can_update; // true kama kuna conflict = disabled
-
-        // Optional: show conflicts
+        btn.disabled = !data.can_update; 
         const conflictsDiv = document.getElementById('conflicts');
         if(conflictsDiv){
             conflictsDiv.innerHTML = data.conflicts.length > 0 ? data.conflicts.join('<br>') : '';
@@ -338,7 +335,7 @@ function loadAvailableRooms() {
     const timetableId = <?php echo e($timetable->id); ?>;
 
     const roomSelect = document.getElementById('room_id');
-    const selectedRoom = roomSelect.value; // 👉 HII INAOKOA ROOM YA MWANZO
+    const selectedRoom = roomSelect.value; 
 
     if (!dayId || !timeslotId) return;
 
@@ -372,7 +369,7 @@ function loadAvailableRooms() {
 
             roomSelect.innerHTML += `
                 <option value="${room.id}" ${selected}>
-                    ${room.name}
+                    ${room.name} - capacity ${room.capacity}
                 </option>
             `;
         });

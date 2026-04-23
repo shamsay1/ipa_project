@@ -17,22 +17,22 @@ class BuildingSeeder extends Seeder
         [
             'building_name' => 'FLOOR 1',
             'building_code' => 'F/001',
-            'created_at' => '04-04-2026',
-            'updated_at' => '04-04-2027'
+            'created_at' => now(),
+            'updated_at' => now(),
 
         ],
         [
             'building_name' => 'FLOOR 2',
             'buidling_code' => 'F/002',
-            'created_at' => '04-04-2026',
-            'updated_at' => '04-04-2027'
+            'created_at' => now(),
+            'updated_at' => now(),
 
         ],
         [
             'building_name' => 'FLOOR 3',
             'building_code' => 'F/003',
-            'created_at' => '04-04-2026',
-            'updated_at' => '04-04-2027'
+            'created_at' => now(),
+            'updated_at' => now(),
 
         ],
     ]);

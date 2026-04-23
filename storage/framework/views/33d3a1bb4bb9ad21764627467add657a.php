@@ -197,7 +197,7 @@
         <li class="ms-auto">
             <form method="POST" action="<?php echo e(route('logout')); ?>" class="mb-0">
                 <?php echo csrf_field(); ?>
-                <button type="submit">
+                 <button type="submit" style="padding: 5px;background-color: #c9a227;border-radius: 5px;color: white;border: none;cursor: pointer">
                     <i class="bi bi-box-arrow-right me-1"></i> Logout
                 </button>
             </form>
@@ -224,7 +224,7 @@
               <div class="table-responsive">
                 <div class="text-end mt-3 nodis">
     <button 
-                class="btn btn-primary"
+                class="btn1"
                 onclick="printTeacherTimetable(this)"
 
                 data-timetable='<?php echo json_encode($timetable["entries"], 15, 512) ?>'

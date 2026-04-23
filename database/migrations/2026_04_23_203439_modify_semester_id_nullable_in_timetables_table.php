@@ -11,11 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('courses', function (Blueprint $table) {
-            $table->dropForeign(['building_id']);
-
-            // Halafu toa column yenyewe
-            $table->dropColumn('building_id');
+        Schema::table('timetables', function (Blueprint $table) {
+            $table->unsignedBigInteger('semester_id')->nullable(false)->change();
         });
     }
 
@@ -24,8 +21,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('courses', function (Blueprint $table) {
-            $table->foreignId('building_id')->constrained()->onDelete('cascade');
+        Schema::table('timetables', function (Blueprint $table) {
+            //
         });
     }
 };

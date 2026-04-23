@@ -40,6 +40,8 @@ Route::post('/teacher-attendance/store',
         [CrInfoController::class,'store1'])
         ->name('teacher.attendance.store');
 
+Route::post('/teacher/emergency', [TeacherController::class, 'markEmergency'])
+    ->name('teacher.emergency');
 
 Route::get("/message",[TimetableGeneratorController::class,"message"])->name("message");
 Route::get("/", [LoginController::class,"ShowLogin"])->name("again");

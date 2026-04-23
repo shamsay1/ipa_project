@@ -141,7 +141,7 @@
                 </div>
                 <div class="col-md-4 mb-3">
                     <label for="credit_hour" class="form-label">Shared Group</label>
-                    <input type="text" id="credit_hour" name="group_name" class="form-control" value="<?php echo e($subject->group_name ? $subject->group_name : 'NONE'); ?>">
+                    <input type="text" id="credit_hour" name="group_name" class="form-control" value="<?php echo e($subject->group_name); ?>">
                 </div>
             </div>
 

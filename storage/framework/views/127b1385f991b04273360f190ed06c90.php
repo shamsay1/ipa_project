@@ -64,11 +64,15 @@
 <body>
 
     <div class="card-box">
-        <h3>INSTITUTE OF PUBLIC ADMINISTRATION (IPA)</h3>
+        <img src="<?php echo e(asset('images/ipalogo1.png')); ?>" alt="image not found" width="180px" height="170px"><br><br>
+        <h3>THE INSTITUTE OF PUBLIC ADMINISTRATION (IPA)</h3>
 
         <p>
             Timetable is under maintenance,<br>
-            please wait until the administrator finishes.
+            please wait until the administrator finishes.<br>
+            If any problems contact to the administrator: <?php echo e($admin->mobile); ?>
+
+
         </p>
 
         <!-- Logout Form -->

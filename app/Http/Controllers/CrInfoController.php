@@ -79,6 +79,13 @@ class CrInfoController extends Controller
 {
     $todayName = Carbon::now()->format('l');
     $todayDate = Carbon::today();
+    DB::table('teacher_attendances')
+        ->where('status', 'emergency')
+        ->whereNotNull('date')
+        ->where('date', '<=', now()->subDays(5))
+        ->update([
+            'status' => 'absent'
+        ]);
 
     $user = Auth::guard('cr')->user();
 
@@ -104,7 +111,7 @@ class CrInfoController extends Controller
         ->where('days.day_name', $todayName)
         ->where('subjects.course_id', $user->course_id)
         ->where('subjects.nta_level', $user->nta)
-        ->where('subjects.semester_id', $user->semester_id) // HII NDIO MUHIMU
+        ->where('subjects.semester_id', $user->semester_id) 
 
         ->select(
             'timetables.id as timetable_id',
@@ -160,7 +167,34 @@ class CrInfoController extends Controller
         )
         ->get();
 
-    return view("lessons", compact("lessons"));
+    $emergencyLessons = DB::table('teacher_attendances')
+    ->join('subjects', 'teacher_attendances.subject_id', '=', 'subjects.id')
+    ->join('teachers', 'teacher_attendances.teacher_id', '=', 'teachers.id')
+
+    
+    ->join('timetables', 'teacher_attendances.timetable_id', '=', 'timetables.id')
+
+    
+    ->leftJoin('rooms', 'timetables.room_id', '=', 'rooms.id')
+
+    ->where('teacher_attendances.status', 'emergency')
+
+    ->where('subjects.course_id', $user->course_id)
+    ->where('subjects.nta_level', $user->nta)
+    ->where('subjects.semester_id', $user->semester_id)
+
+    ->select(
+        'teacher_attendances.*',
+        'subjects.subjectName',
+        'subjects.subjectCode',
+        'subjects.nta_level',
+        'teachers.firstname',
+        'teachers.lastname',
+        'rooms.name as room_name'
+    )
+    ->get();
+
+    return view("lessons", compact("lessons","emergencyLessons"));
 }
     public function store1(Request $request)
 {

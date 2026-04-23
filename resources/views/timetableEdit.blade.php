@@ -209,7 +209,7 @@
             <select name="room_id" id="room_id" class="form-control" oninput="checkConflicts()">
                 @foreach ($rooms as $room)
                 <option value="{{ $room->id}}" {{ $timetable->room_id == $room->id ? "selected" : ""}}>
-                    {{ $room->name}}
+                    {{ $room->name}} 
                 </option>
                 @endforeach
             </select>
@@ -288,7 +288,7 @@ function loadSolutions() {
             });
         }
 
-        // ✅ HAPA TUNA CHECK CONFLICTS KWA UPDATE BUTTON
+        
         checkConflictsForButton();
     });
 }
@@ -318,9 +318,7 @@ function checkConflictsForButton() {
     .then(res => res.json())
     .then(data => {
         const btn = document.getElementById('btnUpdate');
-        btn.disabled = !data.can_update; // true kama kuna conflict = disabled
-
-        // Optional: show conflicts
+        btn.disabled = !data.can_update; 
         const conflictsDiv = document.getElementById('conflicts');
         if(conflictsDiv){
             conflictsDiv.innerHTML = data.conflicts.length > 0 ? data.conflicts.join('<br>') : '';
@@ -334,7 +332,7 @@ function loadAvailableRooms() {
     const timetableId = {{ $timetable->id }};
 
     const roomSelect = document.getElementById('room_id');
-    const selectedRoom = roomSelect.value; // 👉 HII INAOKOA ROOM YA MWANZO
+    const selectedRoom = roomSelect.value; 
 
     if (!dayId || !timeslotId) return;
 
@@ -368,7 +366,7 @@ function loadAvailableRooms() {
 
             roomSelect.innerHTML += `
                 <option value="${room.id}" ${selected}>
-                    ${room.name}
+                    ${room.name} - capacity ${room.capacity}
                 </option>
             `;
         });
