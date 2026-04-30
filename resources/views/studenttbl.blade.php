@@ -267,7 +267,7 @@ GROUP {{ strtoupper($found->group_name) }}
 @endif
 
 <div class="teacher">
-{{ $found->firstname }} {{ $found->lastname }}
+{{ $found->firstname }} {{ $found->middlename }} {{ $found->lastname }}
 </div>
 <div style="font-weight: bold">
 {{ $found->room_name }}
@@ -510,7 +510,7 @@ ${slot}
 
                     <strong>${entry.subjectName}</strong><br>
 
-                    ${entry.firstname} ${entry.lastname}<br>
+                    ${entry.firstname} ${entry.middlename} ${entry.lastname}<br>
 
                     <strong>${entry.room_name}</strong>
 

@@ -10,25 +10,32 @@ use Maatwebsite\Excel\Concerns\WithValidation;
 use Maatwebsite\Excel\Concerns\SkipsFailures;
 use Maatwebsite\Excel\Concerns\SkipsOnFailure;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Auth;
 
 class TeachersImport implements ToModel, WithHeadingRow, WithValidation, SkipsOnFailure
 {
-    use SkipsFailures; // Hii itasababisha makosa yasitoshe kwenye line moja tu, bali yose yatakusanywa
+    use SkipsFailures; 
+    protected $branchId;
 
+    public function __construct($branchId)
+    {
+        $this->branchId = $branchId;
+    }
     public function model(array $row)
     {
         $dept = Department::where("dept_code", $row['dept_code'])->first();
-
+        
         return new Teacher([
-            "firstname"    => $row["firstname"],
-            "middlename"     => $row["middlename"],
-            "lastname"     => $row["lastname"],
+            "firstname"    => strtoupper($row["firstname"]),
+            "middlename"     => strtoupper($row["middlename"]),
+            "lastname"     => strtoupper($row["lastname"]),
             "gender"       => $row["gender"],
             "mobile"       => $row["mobile"],
             "email"        => $row["email"],
             'password'     => Hash::make(trim($row['password'])),
             "teacher_code" => $row['teacher_code'],
             "deptId"       => $dept ? $dept->id : null, 
+            "branch_id"    => $this->branchId,
         ]);
     }
 

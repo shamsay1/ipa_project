@@ -12,8 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('timetables', function (Blueprint $table) {
-            $table->foreignId('semester_id')->constrained()->onDelete('cascade');
-
+            $table->foreignId("branch_id")->constrained()->onDelete("cascade");
         });
     }
 

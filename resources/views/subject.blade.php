@@ -122,7 +122,7 @@
             padding: 0.375rem 0.75rem !important;
         }
 </style>
----
+
 @section("content")
 <div id="content">
     <div class="table-container p-3">
@@ -451,6 +451,7 @@ return $sub->semester->semName;
         <td>
 
         {{ $subject->teacher->firstname }}
+        {{ $subject->teacher->middlename }}
         {{ $subject->teacher->lastname }}
 
         </td>
@@ -624,6 +625,7 @@ return $sub->semester->semName;
 <td>
 
 {{ $subject->teacher->firstname }}
+{{ $subject->teacher->middlename }}
 {{ $subject->teacher->lastname }}
 
 </td>

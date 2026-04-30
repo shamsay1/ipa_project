@@ -10,6 +10,7 @@ use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Events\AfterSheet;
 use PhpOffice\PhpSpreadsheet\Cell\DataValidation;
+use Illuminate\Support\Facades\Auth;
 
 class SubjectExportTemplate implements FromCollection, WithHeadings, WithEvents
 {
@@ -31,7 +32,7 @@ class SubjectExportTemplate implements FromCollection, WithHeadings, WithEvents
             "sem_code",
             "teacher_name",
             "subject_type",  // dropdown (Practical, Theory)
-            "required_lab", // dropdown (Computer, Work shop, Mechanics, Civil lab)
+            "required_lab", // dropdown 
             "credit_hour",
             "group_name"
         ];
@@ -46,11 +47,10 @@ class SubjectExportTemplate implements FromCollection, WithHeadings, WithEvents
                 $spreadsheet = $sheet->getParent();
 
                 /*
-                ================================
-                1️⃣ TEACHER NAME DROPDOWN (COLUMN F)
-                ================================
+                
                 */
-                $teachers = Teacher::orderBy('firstname','asc')->get();
+                $teacher = Auth::user();
+                $teachers = Teacher::orderBy('firstname','asc')->where("branch_id",$teacher->branch_id)->get();
 
                 // helper sheet
                 $teacherSheet = $spreadsheet->createSheet();
@@ -80,7 +80,7 @@ class SubjectExportTemplate implements FromCollection, WithHeadings, WithEvents
 
                 /*
                 ================================
-                2️⃣ SEMESTER DROPDOWN (COLUMN E)
+               SEMESTER DROPDOWN (COLUMN E)
                 ================================
                 */
                 $activeSemesters = Semester::where('status', 'Active')
@@ -104,7 +104,7 @@ class SubjectExportTemplate implements FromCollection, WithHeadings, WithEvents
 
                 /*
                 ================================
-                3️⃣ NTA LEVEL DROPDOWN (COLUMN D)
+                NTA LEVEL DROPDOWN (COLUMN D)
                 ================================
                 */
                 $ntaValidation = new DataValidation();
@@ -122,7 +122,7 @@ class SubjectExportTemplate implements FromCollection, WithHeadings, WithEvents
 
                 /*
                 ================================
-                4️⃣ SUBJECT TYPE DROPDOWN (COLUMN G)
+                SUBJECT TYPE DROPDOWN (COLUMN G)
                 ================================
                 */
                 $subjectTypeValidation = new DataValidation();
@@ -139,9 +139,7 @@ class SubjectExportTemplate implements FromCollection, WithHeadings, WithEvents
                 }
 
                 /*
-                ================================
-                5️⃣ REQUIRED LAB DROPDOWN (COLUMN H)
-                ================================
+               
                 */
                 $labValidation = new DataValidation();
                 $labValidation->setType(DataValidation::TYPE_LIST);
@@ -150,7 +148,7 @@ class SubjectExportTemplate implements FromCollection, WithHeadings, WithEvents
                 $labValidation->setShowInputMessage(true);
                 $labValidation->setShowErrorMessage(true);
                 $labValidation->setShowDropDown(true);
-                $labValidation->setFormula1('"Theory,Computer Lab,Electronics Lab,Engineering Drawing Lab,Civil Materials Lab,Clinical Chemistry Lab,Biochemistry Lab,Microbiology Lab"');
+                $labValidation->setFormula1('"Theory,Computer"');
 
                 for ($i = 2; $i <= 1000; $i++) {
                     $sheet->getCell("H$i")->setDataValidation(clone $labValidation);

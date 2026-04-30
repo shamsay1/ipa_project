@@ -33,6 +33,7 @@ class TeacherTemplateExport implements FromCollection, WithHeadings, WithEvents
             "password",
             "teacher_code",
             "dept_code",
+            
         ];
     }
     

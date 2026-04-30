@@ -7,7 +7,7 @@
 
     <td><?php echo e($teacher->email); ?></td>
     <td><?php echo e($teacher->mobile); ?></td>
-    <td><?php echo e($teacher->teacher_code); ?></td>
+    
     <td><?php echo e($teacher->role); ?></td>
     <td><?php echo e($teacher->status); ?></td>
     <td>

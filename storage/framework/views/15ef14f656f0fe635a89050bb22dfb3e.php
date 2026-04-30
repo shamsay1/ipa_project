@@ -171,10 +171,9 @@
     <thead>
         <tr>
             <th>Teacher Name</th>
-            <th>Total Periods/Week</th>
+            <th>Teaching Days / Week</th> 
+            <th>Days</th> 
             <th>Max per Day</th>
-            <th>Evening Lessons</th>
-            <th>Full Day Load</th> <!-- NEW -->
             <th>Action</th>
         </tr>
     </thead>
@@ -183,10 +182,9 @@
         <?php $__empty_1 = true; $__currentLoopData = $report; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $row): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
             <tr>
                 <td style="text-align: left"><?php echo e($row['teacher']); ?></td>
-                <td><?php echo e($row['total_periods']); ?></td>
+                <td><?php echo e($row['total_teaching_days']); ?></td> 
+                <td><?php echo e($row['days_list']); ?></td>
                 <td><?php echo e($row['max_per_day']); ?></td>
-                <td><?php echo e($row['evening_lessons']); ?></td>
-                <td><?php echo e($row['full_day']); ?></td> <!-- NEW -->
                 <td>
                     <a href="<?php echo e(route('teacher.timetable', ['id' => $row['teacher_id']])); ?>"
                        class="btn btn-sm btn-outline-primary">
@@ -196,7 +194,7 @@
             </tr>
         <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
             <tr>
-                <td colspan="8">No data found for this filter.</td>
+                <td colspan="7">No data found for this filter.</td>
             </tr>
         <?php endif; ?>
     </tbody>

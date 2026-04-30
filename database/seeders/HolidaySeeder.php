@@ -25,7 +25,7 @@ class HolidaySeeder extends Seeder
             ['name' => 'Christmas Day', 'date' => "$year-12-25"],
             ['name' => 'Boxing Day', 'date' => "$year-12-26"],
 
-            // Variable Holidays (update yearly if needed)
+            
             ['name' => 'Good Friday', 'date' => "$year-04-03"],
             ['name' => 'Easter Monday', 'date' => "$year-04-06"],
             ['name' => 'Eid El-Fitr', 'date' => "$year-03-20"],

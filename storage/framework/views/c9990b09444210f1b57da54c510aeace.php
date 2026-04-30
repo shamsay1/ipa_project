@@ -272,7 +272,7 @@ GROUP <?php echo e(strtoupper($found->group_name)); ?>
 <?php endif; ?>
 
 <div class="teacher">
-<?php echo e($found->firstname); ?> <?php echo e($found->lastname); ?>
+<?php echo e($found->firstname); ?> <?php echo e($found->middlename); ?> <?php echo e($found->lastname); ?>
 
 </div>
 <div style="font-weight: bold">
@@ -518,7 +518,7 @@ ${slot}
 
                     <strong>${entry.subjectName}</strong><br>
 
-                    ${entry.firstname} ${entry.lastname}<br>
+                    ${entry.firstname} ${entry.middlename} ${entry.lastname}<br>
 
                     <strong>${entry.room_name}</strong>
 

@@ -8,6 +8,8 @@ use App\Models\Room;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Imports\ClassImport;
 use App\Models\Building;
+use Illuminate\Support\Facades\Auth;
+
 use App\Models\Loggins;
 
 class RoomController extends Controller
@@ -35,7 +37,7 @@ class RoomController extends Controller
         return back()->withErrors(['class_file' => 'File is not match']);
     }
 
-    $import = new ClassImport;
+    $import = new ClassImport(Auth::user()->branch_id);
 
     try {
         Excel::import($import, $file);
@@ -66,7 +68,8 @@ class RoomController extends Controller
 }
     public function index(Request $request)
 {
-    $query = Room::query(); 
+    $teacher = Auth::user();
+    $query = Room::query()->where("branch_id",$teacher->branch_id); 
 
     if ($request->filled('search')) {
     $search = $request->search;
@@ -101,6 +104,7 @@ class RoomController extends Controller
     }
 
         public function store(Request $request){
+            $branch = Auth::user()->branch_id;
 
             $request->validate([
                 "classname" => "required",
@@ -115,6 +119,7 @@ class RoomController extends Controller
                 "type" => $request->type,
                 "practical_type" => $request->practical_type,
                 "building_id" => $request->building_id,
+                "branch_id" => $branch,
             ]);
             if($new_room){
                 return redirect()->back()->with("success","New classroom is added sucessfully");

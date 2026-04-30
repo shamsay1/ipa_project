@@ -229,7 +229,7 @@
 
                 data-timetable='<?php echo json_encode($timetable["entries"], 15, 512) ?>'
                 data-timeslots='<?php echo json_encode($timetable["timeslots"], 15, 512) ?>'
-                data-teacher="<?php echo e(Auth::user()->firstname); ?> <?php echo e(Auth::user()->lastname); ?>"
+                data-teacher="<?php echo e(Auth::user()->firstname); ?> <?php echo e(Auth::user()->middlename); ?> <?php echo e(Auth::user()->lastname); ?>"
                 >
 
                 <i class="fas fa-print"></i> Print Timetable

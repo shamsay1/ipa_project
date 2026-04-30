@@ -187,6 +187,7 @@
                         <option value="">-- Select Practical --</option>
                         <option value="Normal">Normal</option>
                         <option value="Computer">Computer Lab</option>
+                        <option value="Typing Room">Typing Room</option>
 
                     </select>
                     @error("type")

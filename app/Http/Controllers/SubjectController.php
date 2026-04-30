@@ -10,18 +10,23 @@ use App\Models\Teacher;
 use App\Models\Semester;
 use App\Models\Subject;
 use Maatwebsite\Excel\Facades\Excel;
+use Illuminate\Support\Facades\Auth;
 use App\Imports\TeachersImport;
 
 class SubjectController extends Controller
 {
-    public function index()
+   public function index()
 {
-    $teachers = Teacher::where("user_level", "teacher")->get();
+    $teacher = Auth::user();
+
+    $teachers = Teacher::where("branch_id",$teacher->branch_id)->get();
     $courses1 = Course::all();
+
 
     $semester = Semester::where("status", "Active")->get();
     $activeSemesters = $semester->pluck("id");
 
+    
     $degreeCourses = Course::where('course_level', 'degree')
         ->with(['subjects' => function($q) use ($activeSemesters){
             $q->whereIn('semester_id', $activeSemesters)
@@ -44,7 +49,6 @@ class SubjectController extends Controller
         "semester"
     ));
 }
-
 
     public function store(Request $request){
             $request->validate([
@@ -75,12 +79,14 @@ class SubjectController extends Controller
 
         }
         public function edit($id){
-            $teacher = Teacher::where("user_level","teacher")->get();
+            $teacher = Auth::user();
+            $teacher = Teacher::where("branch_id",$teacher->branch_id)->get();
             $subject = Subject::findOrFail($id);
             $course = Course::all();
             return view("subjectEdit",compact("teacher","subject","course"));
         }
         public function update(Request $request,$id){
+
             $request->validate([
                 "subjectName" => "required",
                 "subjectCode" => "required",
@@ -89,7 +95,9 @@ class SubjectController extends Controller
                 "nta_level" => "required",
                 "subject_type" => "required",
                 "required_lab" => "required",
-                "credit_hour" => "required"
+                "credit_hour" => "required",
+                "semester_id" => "required"
+
             ]);
             $subject = Subject::findOrFail($id);
             $subject->update($request->all());
@@ -106,41 +114,44 @@ class SubjectController extends Controller
 
     $file = $request->file('subject_file');
 
-    // 1️⃣ Check headers
-    $expectedHeaders = ['subjectname','subjectcode','course_code','nta_level','sem_code','teacher_code','subject_type','required_lab','credit_hour'];
+    
+    // $expectedHeaders = ['subjectname','subjectcode','course_code','nta_level','sem_code','teacher_code','subject_type','required_lab','credit_hour','group_name'];
 
-    $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($file->getPathname());
-    $sheet = $spreadsheet->getActiveSheet();
-    $headerRow = $sheet->rangeToArray('A1:I1', NULL, TRUE, TRUE, TRUE)[1];
+    // $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($file->getPathname());
+    // $sheet = $spreadsheet->getActiveSheet();
+    // $headerRow = $sheet->rangeToArray('A1:J1', NULL, TRUE, TRUE, TRUE)[1];
 
-    $uploadedHeaders = array_map('strtolower', array_values($headerRow));
+    // $uploadedHeaders = array_map('strtolower', array_values($headerRow));
 
-    if ($uploadedHeaders !== $expectedHeaders) {
-        return back()->withErrors(['subject_file' => 'File is not match']);
-    }
+    // if ($uploadedHeaders !== $expectedHeaders) {
+    //     return back()->withErrors(['subject_file' => 'File is not match']);
+    // }
 
-    $import = new SubjectImport;
-
-    try {
+        $import = new SubjectImport(Auth::user()->branch_id);
         Excel::import($import, $file);
-    } catch (\Maatwebsite\Excel\Validators\ValidationException $e) {
-        $failures = $e->failures();
-        $errors = [];
-        foreach ($failures as $failure) {
-            $errors[] = 'Row '.$failure->row().': '.implode(', ', $failure->errors());
-        }
-        return back()->withErrors($errors);
-    } catch (\Exception $e) {
-        return back()->withErrors(['subject_file' => 'File is not match']);
-    }
 
-    if ($import->failures()->isNotEmpty()) {
-        $errors = [];
-        foreach ($import->failures() as $failure) {
-            $errors[] = 'Row '.$failure->row().': '.implode(', ', $failure->errors());
-        }
-        return back()->withErrors($errors);
-    }
+
+
+    // try {
+    //     Excel::import($import, $file);
+    // } catch (\Maatwebsite\Excel\Validators\ValidationException $e) {
+    //     $failures = $e->failures();
+    //     $errors = [];
+    //     foreach ($failures as $failure) {
+    //         $errors[] = 'Row '.$failure->row().': '.implode(', ', $failure->errors());
+    //     }
+    //     return back()->withErrors($errors);
+    // } catch (\Exception $e) {
+    //     return back()->withErrors(['subject_file' => 'File is not match']);
+    // }
+
+    // if ($import->failures()->isNotEmpty()) {
+    //     $errors = [];
+    //     foreach ($import->failures() as $failure) {
+    //         $errors[] = 'Row '.$failure->row().': '.implode(', ', $failure->errors());
+    //     }
+    //     return back()->withErrors($errors);
+    // }
 
     return back()->with("success","Excel data is inserted successfully");
 }

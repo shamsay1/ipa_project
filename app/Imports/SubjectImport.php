@@ -17,6 +17,12 @@ use Maatwebsite\Excel\Concerns\ToCollection;
 class SubjectImport implements ToModel, WithHeadingRow, WithValidation, SkipsOnFailure
 {
     use SkipsFailures;
+    protected $branchId;
+
+    public function __construct($branchId)
+    {
+        $this->branchId = $branchId;
+    }
 
     private $subjectCodes = [];
 
@@ -43,7 +49,7 @@ class SubjectImport implements ToModel, WithHeadingRow, WithValidation, SkipsOnF
    
     $teacher = Teacher::whereRaw(
         "CONCAT(firstname,' ',middlename,' ',lastname) = ?", 
-        [$row['teacher_name']]   // Excel column = teacher_name
+        [$row['teacher_name']]   
     )->first();
     $course  = Course::where("course_code", $row['course_code'])->first();
     $semester = Semester::where("semCode", $row['sem_code'])->first();
@@ -59,6 +65,7 @@ class SubjectImport implements ToModel, WithHeadingRow, WithValidation, SkipsOnF
         "required_lab"  => $row['required_lab'],
         "credit_hour"   => $row['credit_hour'],
         "group_name"    => $row['group_name'],
+        "branch_id" => $this->branchId,
     ]);
 }
 

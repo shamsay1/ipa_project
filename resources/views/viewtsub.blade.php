@@ -137,7 +137,7 @@
                     {{ strtoupper($sub['subjectName']) }}
                 </td>
                 <td>
-                    {{ implode(' + ', $sub['courses']) }}
+                    {{ implode(' + ', $sub['courses'])  }}
                 </td>
 
                 <td>{{ $sub['subjectCode'] }}</td>

@@ -6,13 +6,17 @@ use Illuminate\Database\Eloquent\Model;
 
 class Course_room extends Model
 {
-    protected $fillable = ['course_id', 'nta_level', 'group_name', 'room_id','total_students'];
+    protected $fillable = ['course_id', 'nta_level', 'group_name', 'room_id','total_students','branch_id'];
 
 
     public function course()
     {
         return $this->belongsTo(Course::class, 'course_id');
     }
+    public function branch()
+{
+    return $this->belongsTo(Branch::class);
+}
 
 
     public function room()

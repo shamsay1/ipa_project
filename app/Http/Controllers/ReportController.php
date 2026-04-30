@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Department;
 use App\Models\Semester;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+
 use Illuminate\Support\Facades\DB;
 class ReportController extends Controller
 {
@@ -22,7 +24,7 @@ public function teacherLoadReport(Request $request)
 {
     $departments = DB::table('departments')->get();
     $semesters = DB::table('semesters')->orderBy('id', 'asc')->get();
-
+    $branchId = Auth::user()->branch_id;
     $query = DB::table('timetables as t')
         ->join('subjects as s', 't.subject_id', '=', 's.id')
         ->join('teachers as tr', 's.teacher_id', '=', 'tr.id')
@@ -53,70 +55,77 @@ public function teacherLoadReport(Request $request)
     $data = $query->get();
 
     $report = [];
-    foreach ($data->groupBy('teacher_id') as $teacherId => $lessons) {
 
-        $totalPeriods = $lessons->count();
-        $totalSubjects = $lessons->groupBy('subject_id')->count();
+foreach ($data->groupBy('teacher_id') as $teacherId => $lessons) {
 
-        if ($totalSubjects > 4) {
-            $subjectStatus = "Overloaded";
-        } elseif ($totalSubjects < 4) {
-            $subjectStatus = "Underloaded";
-        } else {
-            $subjectStatus = "Balanced";
-        }
+    // 🔥 HII NDIYO MUHIMU (Distinct days per week)
+    $totalTeachingDays = $lessons->pluck('day_id')->unique()->count();
 
-        // Max per day
-        $dayCounts = $lessons->groupBy('day_id')->map(fn($items) => $items->count());
-        $maxPerDay = $dayCounts->max() ?? 0;
-        $maxDayId = $dayCounts->sortDesc()->keys()->first();
-        $dayName = $lessons->firstWhere('day_id', $maxDayId)->day_name ?? '-';
+    // Total Subjects
+    $totalSubjects = $lessons->groupBy('subject_id')->count();
 
-        // Evening (16:00 - 18:30)
-        $evening = $lessons
-            ->filter(fn($l) => $l->start_time >= '16:00:00' && $l->end_time <= '18:30:00')
-            ->count();
-
-        // ============================
-        // 🔥 FULL DAY CHECK HERE
-        // ============================
-        $fullDay = "-";
-        $totalSlotsPerDay = DB::table('timeslots')->count(); // Jumla ya slots za siku
-
-        foreach ($lessons->groupBy('day_id') as $dayId => $dailyLessons) {
-            if ($dailyLessons->count() == $totalSlotsPerDay) {
-                $fullDay = "Full Day Load (" . $dailyLessons->first()->day_name . ")";
-                break;
-            }
-        }
-
-        // Overall Status
-        $status = "Balanced";
-        if ($totalPeriods < 10) {
-            $status = "Underloaded";
-        } elseif ($totalPeriods > 15) {
-            $status = "Overloaded";
-        }
-        if ($maxPerDay > 5) {
-            $status .= " (Heavy $dayName)";
-        }
-        if ($evening > 3) {
-            $status .= " (Too many evening lessons)";
-        }
-
-        // Build final row
-        $report[] = [
-            'teacher_id'      => $teacherId,
-            'teacher'         => $lessons->first()->teacher_name,
-            'total_subjects'  => $totalSubjects,
-            'subject_status'  => $subjectStatus,
-            'total_periods'   => $totalPeriods,
-            'max_per_day'     => $maxPerDay . " ($dayName)",
-            'evening_lessons' => $evening,
-            'full_day'        => $fullDay,     // NEW COLUMN
-            'status'          => $status,
-        ];
+    if ($totalSubjects > 4) {
+        $subjectStatus = "Overloaded";
+    } elseif ($totalSubjects < 4) {
+        $subjectStatus = "Underloaded";
+    } else {
+        $subjectStatus = "Balanced";
     }
+
+    // Max per day (bado useful)
+    $dayCounts = $lessons->groupBy('day_id')->map(fn($items) => $items->count());
+    $maxPerDay = $dayCounts->max() ?? 0;
+    $maxDayId = $dayCounts->sortDesc()->keys()->first();
+    $dayName = $lessons->firstWhere('day_id', $maxDayId)->day_name ?? '-';
+
+    // Evening lessons
+    $evening = $lessons
+        ->filter(fn($l) => $l->start_time >= '16:00:00' && $l->end_time <= '18:30:00')
+        ->count();
+
+    // Full Day Check
+    $fullDay = "-";
+    $totalSlotsPerDay = DB::table('timeslots')->count();
+
+    foreach ($lessons->groupBy('day_id') as $dayId => $dailyLessons) {
+        if ($dailyLessons->count() == $totalSlotsPerDay) {
+            $fullDay = "Full Day Load (" . $dailyLessons->first()->day_name . ")";
+            break;
+        }
+    }
+
+    // 🔥 STATUS SASA INATEGEMEA TEACHING DAYS
+    $status = "Balanced";
+
+    if ($totalTeachingDays <= 2) {
+        $status = "Underloaded";
+    } elseif ($totalTeachingDays >= 5) {
+        $status = "Overloaded";
+    }
+
+    if ($maxPerDay > 5) {
+        $status .= " (Heavy $dayName)";
+    }
+
+    if ($evening > 3) {
+        $status .= " (Too many evening lessons)";
+    }
+
+    // Optional: list ya siku
+    $daysList = $lessons->pluck('day_name')->unique()->implode(', ');
+
+    // Final report
+    $report[] = [
+        'teacher_id'          => $teacherId,
+        'teacher'             => $lessons->first()->teacher_name,
+        'total_teaching_days' => $totalTeachingDays, // 🔥 HII NDIYO MPYA
+        'days_list'           => $daysList,          // optional
+        'max_per_day'         => $maxPerDay . " ($dayName)",
+        'evening_lessons'     => $evening,
+        'full_day'            => $fullDay,
+        'status'              => $status,
+    ];
+}
 
     return view('report', compact('departments', 'semesters', 'report'));
 }
@@ -169,7 +178,7 @@ public function teacherLoadReport(Request $request)
 
     // 🔥 CHUKUA SEMESTER ZOTE ACTIVE
     $activeSemesters = Semester::where('status', 'Active')->pluck('id');
-
+    $branchId = Auth::user()->branch_id;
     $reportType = $request->get('report_type');
     $roomId = $request->get('room_id');
     $report = null;
@@ -177,15 +186,16 @@ public function teacherLoadReport(Request $request)
     $days = DB::table('days')->orderBy('id')->get();
     $timeslots = DB::table('timeslots')->orderBy('id')->get();
 
-    $allRooms = DB::table('rooms')->select('id','name')->get();
+    $allRooms = DB::table('rooms')->where("branch_id",$branchId)->select('id','name')->get();
 
     if ($reportType === 'room' && $roomId) 
     {
         $usage = DB::table('timetables')
             ->join('subjects','timetables.subject_id','=','subjects.id')
 
-            // 🔥 BADALA YA SINGLE SEMESTER
+            
             ->whereIn('subjects.semester_id', $activeSemesters)
+            ->where('timetables.branch_id', $branchId)
 
             ->where('timetables.room_id', $roomId)
             ->select('timetables.day_id','timetables.timeslot_id')

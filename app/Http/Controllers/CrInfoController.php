@@ -30,8 +30,8 @@ class CrInfoController extends Controller
 
         $courses = Course::all();
         $semesters = Semester::all();
-
-        $crs = CrInfo::with(['course','semester'])->get();
+        $teacher = Auth::user();
+        $crs = CrInfo::with(['course','semester'])->where("branch_id",$teacher->branch_id)->get();
 
         return view("regcr",compact("courses","semesters","crs"));
 
@@ -59,6 +59,7 @@ class CrInfoController extends Controller
 
     public function store(Request $request)
     {
+        $branchId = Auth::user()->branch_id;
         $request->validate([
             'firstname' => 'required',
             'middlename' => 'required',
@@ -70,7 +71,17 @@ class CrInfoController extends Controller
             'nta' => 'required'
         ]);
 
-        CrInfo::create($request->all());
+        CrInfo::create([
+            "firstname" => $request->firstname,
+            "middlename" => $request->middlename,
+            "lastname" => $request->lastname,
+            "mobile" => $request->mobile,
+            "email" => $request->email,
+            "password" => $request->password,
+            "course_id" => $request->course_id,
+            "nta" => $request->nta,
+            "branch_id" => $branchId,
+        ]);
 
         return redirect()->route('cr_info.index')
                          ->with('success', 'CR Registered Successfully');
@@ -107,7 +118,7 @@ class CrInfoController extends Controller
     $timetables = DB::table('timetables')
         ->join('subjects','subjects.id','=','timetables.subject_id')
         ->join('days','days.id','=','timetables.day_id')
-
+        ->where('timetables.branch_id', $user->branch_id)
         ->where('days.day_name', $todayName)
         ->where('subjects.course_id', $user->course_id)
         ->where('subjects.nta_level', $user->nta)
@@ -134,6 +145,7 @@ class CrInfoController extends Controller
             [
                 'teacher_id' => $tt->teacher_id,
                 'subject_id' => $tt->subject_id,
+                'branch_id' => $user->branch_id,
                 'status' => 'absent'
             ]
         );
@@ -181,6 +193,7 @@ class CrInfoController extends Controller
 
     ->where('subjects.course_id', $user->course_id)
     ->where('subjects.nta_level', $user->nta)
+    ->where("subjects.branch_id",$user->branch_id)
     ->where('subjects.semester_id', $user->semester_id)
 
     ->select(
@@ -198,6 +211,7 @@ class CrInfoController extends Controller
 }
     public function store1(Request $request)
 {
+    
     $attendance = TeacherAttendance::where('timetable_id', $request->timetable_id)
                     ->where('date', Carbon::today())
                     ->firstOrFail();
@@ -230,6 +244,7 @@ class CrInfoController extends Controller
         ->leftJoin('teachers','teachers.id','=','timetables.teacher_id')
 
         ->where('subjects.course_id',$course_id)
+        ->where("subjects.branch_id",$student->branch_id)
         ->where('subjects.nta_level',$nta_level)
         ->where('subjects.semester_id',$semester_id)
 
@@ -258,6 +273,7 @@ class CrInfoController extends Controller
             'timetables.group_name',
             'rooms.name as room_name',
             'teachers.firstname',
+            'teachers.middlename',
             'teachers.lastname'
         )
 
@@ -290,6 +306,7 @@ class CrInfoController extends Controller
     $subjects = Subject::with(['course','semester','teacher'])
         ->where('course_id', $course_id)
         ->where('nta_level', $nta1)
+        ->where("branch_id",$student->branch_id)
         ->where('semester_id', $semester_id) 
         ->orderBy('semester_id')
         ->get();
@@ -312,7 +329,7 @@ class CrInfoController extends Controller
 
     $file = $request->file('student_file');
 
-    // Columns zinazotakiwa
+    
     $expectedHeaders = [
         'firstname',
         'middlename',
@@ -344,7 +361,8 @@ class CrInfoController extends Controller
         ]);
     }
 
-    $import = new StudentImport();
+    $import = new StudentImport(Auth::user()->branch_id);
+    
     Excel::import($import, $file);
 
 

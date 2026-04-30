@@ -7,7 +7,7 @@
 
     <td>{{ $teacher->email }}</td>
     <td>{{ $teacher->mobile }}</td>
-    <td>{{ $teacher->teacher_code }}</td>
+    {{-- <td>{{ $teacher->teacher_code }}</td> --}}
     <td>{{ $teacher->role}}</td>
     <td>{{ $teacher->status }}</td>
     <td>

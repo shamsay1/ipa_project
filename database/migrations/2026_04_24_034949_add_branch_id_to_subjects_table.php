@@ -11,8 +11,9 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('timetables', function (Blueprint $table) {
-            $table->string("group_name")->nullable()->after("room_id");
+        Schema::table('subjects', function (Blueprint $table) {
+            $table->foreignId("branch_id")->nullable()->constrained()->onDelete("cascade");
+            
         });
     }
 
@@ -21,7 +22,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('timetables', function (Blueprint $table) {
+        Schema::table('subjects', function (Blueprint $table) {
             //
         });
     }

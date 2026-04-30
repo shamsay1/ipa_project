@@ -16,7 +16,6 @@ return new class extends Migration
             $table->string("name");
             $table->string("capacity");
             $table->string("type");
-            $table->string("location");
             $table->string("status")->default("active");
             $table->timestamps();
         });

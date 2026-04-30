@@ -85,7 +85,7 @@
                     <select name="teacher_id" class=" fomr-select selectpicker w-100" data-live-search="true" style="width:100%">
                         @foreach ($teacher as $te)
                             <option value="{{ $te->id }}" {{ $subject->teacher_id == $te->id ? "selected" : "" }}>
-                                {{ $te->firstname }} {{ $te->lastname }}
+                                {{ $te->firstname }} {{ $te->middlename }} {{ $te->lastname }}
                             </option>
                         @endforeach
                     </select>
@@ -116,6 +116,7 @@
                 <div class="col-md-4 mb-3">
                     <label for="subject_type" class="form-label">Subject Type</label>
                     <select name="subject_type" class="form-select">
+
                         <option value="Theory" {{ $subject->subject_type == "Theory" ? "selected" : ""}}>Theory</option>
                         <option value="Practical" {{ $subject->subject_type == "Practical" ? "selected" : ""}}>Practical</option>
                     </select>
@@ -127,7 +128,8 @@
                     <label for="required_lab" class="form-label">Required Lab</label><br>
                     <select name="required_lab" class="selectpicker w-100" data-live-search="true">
                         <option value="Theory" {{ $subject->required_lab == "Theory" ? "selected" : ""}}>Theory</option>
-                        <option value="Computer Lab" {{ $subject->required_lab == "Computer" ? "selected" : ""}}>Computer Lab</option>
+                        <option value="Computer" {{ $subject->required_lab == "Computer" ? "selected" : ""}}>Computer Lab</option>
+                        <option value="Typing Room" {{ $subject->required_lab == "Typing Room" ? "selected" : ""}}>Typing Room</option>
              
                     </select>
                 </div>
@@ -141,6 +143,12 @@
                 <div class="col-md-4 mb-3">
                     <label for="credit_hour" class="form-label">Shared Group</label>
                     <input type="text" id="credit_hour" name="group_name" class="form-control" value="{{ $subject->group_name}}">
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12 mb-3">
+                    <label for="credit_hour" class="form-label">Shared Group</label>
+                    <input type="text" id="credit_hour" name="semester_id" class="form-control" value="{{ $subject->semester_id}}">
                 </div>
             </div>
 

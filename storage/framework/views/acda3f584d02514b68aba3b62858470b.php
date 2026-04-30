@@ -110,34 +110,49 @@
             <div class="alert alert-dismissible fade show flash-message" role="alert">
   <div class="d-flex align-items-center">
     <i class="bi bi-check-circle-fill me-2"></i> <div class="flex-grow-1">
-      <h6 class="alert-heading mb-1"> Edit Timeslot</h6>
+      <h6 class="alert-heading mb-1"> Edit Teachers Information</h6>
       <p class="mb-0" style="color: green"><?php echo e(session('success')); ?></p>
     </div>
     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
   </div>
 </div>
 
-<form action="<?php echo e(route('timeslot.update',$time->id)); ?>" method="post">
-            <?php echo csrf_field(); ?>
-            <?php echo method_field('PUT'); ?>
+<form action="<?php echo e(route('course.update', $course->id)); ?>" method="post">
+    <?php echo csrf_field(); ?>
+    <?php echo method_field('PUT'); ?>
 
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label for="firstname" class="form-label">Start Time</label>
-                    <input type="time" id="firstname" name="start_time" class="form-control" value="<?php echo e($time->start_time); ?>">
-                </div>
-                <div class="col-md-6 mb-3">
-                    <label for="lastname" class="form-label">End Time</label>
-                    <input type="time" id="lastname" name="end_time" class="form-control" value="<?php echo e($time->end_time); ?>">
-                </div>
-            </div>
+    <div class="row">
+        <!-- Course Name -->
+        <div class="col-md-4 mb-3">
+            <label for="courseName" class="form-label">Course Name</label>
+            <input type="text" id="courseName" name="courseName" class="form-control" value="<?php echo e($course->courseName); ?>">
+        </div>
+        <div class="col-md-4 mb-3">
+            <label for="courseName" class="form-label">Course Code</label>
+            <input type="text" id="courseName" name="course_code" class="form-control" value="<?php echo e($course->course_code); ?>">
+        </div>
 
-            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                <button type="submit" class="btn btn-primary mt-3">
-                    <i class="bi bi-save me-2"></i>Update
-                </button>
-            </div>
-        </form>
+        <!-- Department -->
+        <div class="col-md-4 mb-3">
+            <label for="department" class="form-label">Department</label>
+            <select id="department" name="deptId" class="form-select">
+                <?php $__currentLoopData = $dept; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $de): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                    <option value="<?php echo e($de->id); ?>" <?php echo e($course->deptId == $de->id ? 'selected' : ''); ?>>
+                        <?php echo e($de->deptName); ?>
+
+                    </option>
+                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+            </select>
+        </div>
+    </div>
+
+    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+        <button type="submit" class="btn btn-primary mt-3">
+            <i class="bi bi-save me-2"></i>Update
+        </button>
+    </div>
+</form>
+
             
 
             
@@ -145,4 +160,4 @@
     </div>
 
 <?php $__env->stopSection(); ?>
-<?php echo $__env->make("layout.app", array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH C:\Users\PC\Documents\Timetable\resources\views/TimeslotEdit.blade.php ENDPATH**/ ?>
+<?php echo $__env->make("layout.app", array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH C:\Users\PC\Documents\Timetable\resources\views/courseEdit.blade.php ENDPATH**/ ?>

@@ -278,7 +278,7 @@ function loadSolutions() {
                 <div class="conflict-item warning">No solutions found.</div>
             `;
         } else {
-            data.solutions.slice(0,50).forEach(opt => { // Onyesha 50 za mwanzo
+            data.solutions.slice(0,130).forEach(opt => { // Onyesha 50 za mwanzo
                 container.innerHTML += `
                     <div class="no-conflicts">
                         <i class="bi bi-check-circle-fill"></i>

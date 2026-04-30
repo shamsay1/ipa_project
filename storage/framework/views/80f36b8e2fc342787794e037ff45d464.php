@@ -85,7 +85,7 @@
                     <select name="teacher_id" class=" fomr-select selectpicker w-100" data-live-search="true" style="width:100%">
                         <?php $__currentLoopData = $teacher; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $te): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                             <option value="<?php echo e($te->id); ?>" <?php echo e($subject->teacher_id == $te->id ? "selected" : ""); ?>>
-                                <?php echo e($te->firstname); ?> <?php echo e($te->lastname); ?>
+                                <?php echo e($te->firstname); ?> <?php echo e($te->middlename); ?> <?php echo e($te->lastname); ?>
 
                             </option>
                         <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
@@ -117,6 +117,7 @@
                 <div class="col-md-4 mb-3">
                     <label for="subject_type" class="form-label">Subject Type</label>
                     <select name="subject_type" class="form-select">
+
                         <option value="Theory" <?php echo e($subject->subject_type == "Theory" ? "selected" : ""); ?>>Theory</option>
                         <option value="Practical" <?php echo e($subject->subject_type == "Practical" ? "selected" : ""); ?>>Practical</option>
                     </select>
@@ -128,7 +129,8 @@
                     <label for="required_lab" class="form-label">Required Lab</label><br>
                     <select name="required_lab" class="selectpicker w-100" data-live-search="true">
                         <option value="Theory" <?php echo e($subject->required_lab == "Theory" ? "selected" : ""); ?>>Theory</option>
-                        <option value="Computer Lab" <?php echo e($subject->required_lab == "Computer" ? "selected" : ""); ?>>Computer Lab</option>
+                        <option value="Computer" <?php echo e($subject->required_lab == "Computer" ? "selected" : ""); ?>>Computer Lab</option>
+                        <option value="Typing Room" <?php echo e($subject->required_lab == "Typing Room" ? "selected" : ""); ?>>Typing Room</option>
              
                     </select>
                 </div>
@@ -142,6 +144,12 @@
                 <div class="col-md-4 mb-3">
                     <label for="credit_hour" class="form-label">Shared Group</label>
                     <input type="text" id="credit_hour" name="group_name" class="form-control" value="<?php echo e($subject->group_name); ?>">
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12 mb-3">
+                    <label for="credit_hour" class="form-label">Shared Group</label>
+                    <input type="text" id="credit_hour" name="semester_id" class="form-control" value="<?php echo e($subject->semester_id); ?>">
                 </div>
             </div>
 

@@ -3,15 +3,33 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Auth;
 
 class Timetable extends Model
 {
+
+     protected static function booted()
+    {
+        static::addGlobalScope('branch', function ($query) {
+            if (Auth::check()) {
+                $query->where('branch_id', Auth::user()->branch_id);
+            }
+        });
+
+        
+        static::creating(function ($model) {
+            if (Auth::check() && empty($model->branch_id)) {
+                $model->branch_id = Auth::user()->branch_id;
+            }
+        });
+    }
     protected $fillable = [
         "day_id",
         "subject_id",
         "timeslot_id",
         "room_id",
-        "semester_id"
+        "semester_id",
+        "branch_id"
     ];
     public function day()
     {
@@ -21,6 +39,10 @@ class Timetable extends Model
     public function subject()
     {
         return $this->belongsTo(Subject::class);
+    }
+    public function branch()
+    {
+        return $this->belongsTo(Branch::class);
     }
 
     public function timeslot()

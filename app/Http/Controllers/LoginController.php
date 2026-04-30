@@ -74,10 +74,11 @@ class LoginController extends Controller
 
 
     public function showDash() {
-    $tcount = Teacher::where("user_level","teacher")->count();
+    $branchId = Auth::user()->branch_id;
+    $tcount = Teacher::where("user_level","teacher")->where("branch_id",$branchId)->get()->count();
     $courses = Course::all();
     $total = $courses->count();
-    $rooms = Room::all();
+    $rooms = Room::where("branch_id",$branchId)->get();
     $troom = $rooms->count();
     $dept = Department::all();
     $dept1 = $dept->count();
@@ -88,6 +89,7 @@ class LoginController extends Controller
             ->join('days', 'timetables.day_id', '=', 'days.id')
             ->join('subjects', 'timetables.subject_id', '=', 'subjects.id')
             ->where('subjects.semester_id', $activeSemester->id)
+            ->where('timetables.branch_id',$branchId)
             ->select('days.day_name', DB::raw('COUNT(timetables.id) as total_periods'))
             ->groupBy('days.day_name', 'days.id')
             ->orderBy(column: 'days.id')

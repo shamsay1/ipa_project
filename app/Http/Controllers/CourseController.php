@@ -78,7 +78,6 @@ class CourseController extends Controller
             "courseName"     => "required",
             "course_code"    => "required",
             "deptId"         => "required",
-            "course_level"   => "required"
         ]);
 
         $course = Course::findOrFail($id);
@@ -87,7 +86,6 @@ class CourseController extends Controller
             'courseName'     => $request->courseName,
             'course_code'    => $request->course_code,
             'deptId'         => $request->deptId,
-            'course_level'   => $request->course_level
         ]);
 
         return redirect()->route("course.index")->with("success", "Course updated successfully");

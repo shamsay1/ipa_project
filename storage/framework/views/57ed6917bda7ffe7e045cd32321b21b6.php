@@ -357,6 +357,7 @@
             <span>Time Slot</span>
         </a>
     </li>
+    
 
     
 <li class="nav-item">
@@ -451,6 +452,20 @@
 
     </ul>
 </li>
+<li class="nav-item">
+    <a href="/teachersub1" 
+       class="nav-link <?php echo e(request()->routeIs('teachersub1') ? 'active' : ''); ?>">
+        <i class="bi bi-journal-bookmark"></i> My Subjects
+    </a>
+</li>
+
+<li class="nav-item">
+    <a href="/teachertbl1" 
+       class="nav-link <?php echo e(request()->routeIs('teachertbl1') ? 'active' : ''); ?>">
+        <i class="bi bi-table"></i> My Timetable
+    </a>
+</li>
+
 
     
     <li class="nav-item">

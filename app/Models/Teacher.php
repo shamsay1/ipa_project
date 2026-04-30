@@ -23,6 +23,7 @@ class Teacher extends Authenticatable
         "teacher_code",
         "deptId",
         "role",
+        "branch_id"
 
     ];
 
@@ -38,7 +39,11 @@ class Teacher extends Authenticatable
         return $this->belongsTo(Department::class,"deptId");
     }
     public function sendPasswordResetNotification($token)
-{
-    $this->notify(new CustomResetPassword($token));
-}
+    {
+        $this->notify(new CustomResetPassword($token));
+    }
+    public function branch()
+    {
+        return $this->belongsTo(Branch::class);
+    }
 }

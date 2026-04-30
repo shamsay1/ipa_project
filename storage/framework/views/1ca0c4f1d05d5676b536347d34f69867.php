@@ -705,7 +705,7 @@ function openEmailModal(btn){
 
                                                         <strong>${entry.subjectName}</strong><br>
 
-                                                        ${entry.firstname} ${entry.lastname}<br>
+                                                        ${entry.firstname} ${entry.middlename} ${entry.lastname}<br>
 
                                                         ${entry.room_name}
 
@@ -744,5 +744,5 @@ function openEmailModal(btn){
             }
             </style>
 
-            <?php $__env->stopSection(); ?>
+<?php $__env->stopSection(); ?>
 <?php echo $__env->make("layout.app", array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH C:\Users\PC\Documents\Timetable\resources\views/timetable/generate.blade.php ENDPATH**/ ?>

@@ -229,7 +229,7 @@
 
                 data-timetable='@json($timetable["entries"])'
                 data-timeslots='@json($timetable["timeslots"])'
-                data-teacher="{{ Auth::user()->firstname }} {{ Auth::user()->lastname }}"
+                data-teacher="{{ Auth::user()->firstname }} {{ Auth::user()->middlename }} {{ Auth::user()->lastname }}"
                 >
 
                 <i class="fas fa-print"></i> Print Timetable

@@ -157,7 +157,129 @@
     </tbody>
 </table>
 
+<button 
+                class="btn btn-primary"
+                onclick="printTeacherTimetable(this)"
+
+                data-timetable='<?php echo json_encode($timetable["entries"], 15, 512) ?>'
+                data-timeslots='<?php echo json_encode($timetable["timeslots"], 15, 512) ?>'
+                data-teacher="<?php echo e($teacher->firstname); ?> <?php echo e($teacher->middlename); ?> <?php echo e($teacher->lastname); ?>"
+                >
+
+                <i class="fas fa-print"></i> Print Timetable
+
+                </button>
+
 </div>
+ <script>
+function printTeacherTimetable(button) {
+    const timetableData = JSON.parse(button.getAttribute("data-timetable"));
+    const timeslots = JSON.parse(button.getAttribute("data-timeslots"));
+    const teacherName = button.getAttribute("data-teacher");
+
+    const days = Object.keys(timetableData);
+
+    // ==== Collect GROUP COURSES (use fullCourseName) ====
+    const groupCourses = {};
+
+    days.forEach(day => {
+        timetableData[day].forEach(entry => {
+            if(entry.group_name){
+                if(!groupCourses[entry.group_name]) groupCourses[entry.group_name] = [];
+
+                // tumia fullCourseName (ina Roman tayari)
+                if(!groupCourses[entry.group_name].includes(entry.fullCourseName)){
+                    groupCourses[entry.group_name].push(entry.fullCourseName);
+                }
+            }
+        });
+    });
+
+    // ===== open print window =====
+    const printWindow = window.open('', '', 'width=1200,height=900');
+
+    printWindow.document.write(`
+    <html>
+    <head>
+        <title>Teacher ${teacherName} Timetable</title>
+        <style>
+            @page { margin:0 }
+            body{ margin:40px; font-family:'Times New Roman'; }
+            h2,h4{text-align:center; margin:3px;}
+            table{width:100%; border-collapse:collapse; margin-top:20px; font-size:13px;}
+            th,td{border:1px solid black; padding:6px; text-align:center; vertical-align:middle;}
+            th{background:#e9ecef; font-weight:bold;}
+            td:first-child{font-weight:bold; background:#f2f2f2;}
+        </style>
+    </head>
+    <body onload="window.print();window.close();">
+        <h2>THE INSTITUTE OF PUBLIC AND ADMINISTRATION</h2>
+        <h4>TIMETABLE FOR TEACHER: ${teacherName.toUpperCase()}</h4>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>DAY / TIME</th>
+                    ${timeslots.map((slot,index) => `
+                        <th style="font-size:11px;line-height:1.2">
+                            <div style="font-weight:bold;font-size:25px">${index + 1}</div>
+                            <div>${slot.start.slice(0,5)} - ${slot.end.slice(0,5)}</div>
+                        </th>
+                    `).join('')}
+                </tr>
+            </thead>
+
+            <tbody>
+                ${days.map(day => `
+                    <tr>
+                        <td>${day.toUpperCase()}</td>
+
+                        ${timeslots.map(slot => {
+
+                            const entry = timetableData[day].find(e =>
+                                e.start_time === slot.start && e.end_time === slot.end
+                            );
+
+                            if(entry){
+
+                                let html = '';
+
+                                if(entry.group_name){
+
+                                    const groupSubjects = groupCourses[entry.group_name] || [];
+
+                                    // 🔥 SHOW GROUP NAME + COURSES
+                                    html += '<strong>' + entry.group_name.toUpperCase() + '</strong><br>';
+                                    html += groupSubjects.join(' + ') + '<br>';
+                                    html += 'ROOM: ' + entry.room_name;
+
+                                }else{
+
+                                    html += `<strong>${entry.subjectName} (${entry.subjectCode})</strong><br>`;
+                                    html += `${entry.fullCourseName} (${entry.nta_level})<br>`;
+                                    html += 'ROOM: ' + entry.room_name;
+                                }
+
+                                return `<td>${html}</td>`;
+
+                            }else{
+                                return `<td></td>`;
+                            }
+
+                        }).join('')}
+
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+
+    </body>
+    </html>
+    `);
+
+    printWindow.document.close();
+}
+</script>
         <a href="<?php echo e(route('teacher.load.report1')); ?>" class="btn btn-secondary btn-sm">← Back</a>
 
 

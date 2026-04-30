@@ -8,11 +8,13 @@ use App\Models\Course_room;
 use App\Models\Room;
 use Illuminate\Http\Request;
 use Maatwebsite\Excel\Facades\Excel;
+use Illuminate\Support\Facades\Auth;
 
 class CourseRoomController extends Controller
 {
     public function index(){
-        $classrooms = Course_room::with("course", "room")->get();
+        $teacher = Auth::user();
+        $classrooms = Course_room::with("course", "room")->where("course_rooms.branch_id",$teacher->branch_id)->get();
         $rooms = Room::all();
         $courses = Course::all();
         return view("roomasign",compact("classrooms","courses","rooms"));
@@ -82,7 +84,8 @@ class CourseRoomController extends Controller
     $request->validate([
         'file' => 'required|mimes:xlsx,csv'
     ]);
-    Excel::import(new CourseRoomsImport, $request->file('file'));
+    
+     Excel::import(new CourseRoomsImport(Auth::user()->branch_id), $request->file('file'));
 
     return back()->with('success', 'Course Rooms imported successfully');
 }

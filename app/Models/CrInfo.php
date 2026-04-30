@@ -19,6 +19,7 @@ class CrInfo extends Authenticatable
         'course_id',
         'semester_id',
         'nta',
+        'branch_id'
     ];
 
     public function course()
@@ -32,7 +33,11 @@ class CrInfo extends Authenticatable
         $this->attributes['password'] = Hash::make($value);
     }
     public function semester()
-{
-    return $this->belongsTo(Semester::class);
-}
+    {
+        return $this->belongsTo(Semester::class);
+    }
+    public function branch()
+    {
+        return $this->belongsTo(Branch::class);
+    }
 }

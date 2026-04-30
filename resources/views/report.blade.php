@@ -169,10 +169,9 @@
     <thead>
         <tr>
             <th>Teacher Name</th>
-            <th>Total Periods/Week</th>
+            <th>Teaching Days / Week</th> 
+            <th>Days</th> 
             <th>Max per Day</th>
-            <th>Evening Lessons</th>
-            <th>Full Day Load</th> <!-- NEW -->
             <th>Action</th>
         </tr>
     </thead>
@@ -181,10 +180,9 @@
         @forelse($report as $row)
             <tr>
                 <td style="text-align: left">{{ $row['teacher'] }}</td>
-                <td>{{ $row['total_periods'] }}</td>
+                <td>{{ $row['total_teaching_days'] }}</td> 
+                <td>{{ $row['days_list'] }}</td>
                 <td>{{ $row['max_per_day'] }}</td>
-                <td>{{ $row['evening_lessons'] }}</td>
-                <td>{{ $row['full_day'] }}</td> <!-- NEW -->
                 <td>
                     <a href="{{ route('teacher.timetable', ['id' => $row['teacher_id']]) }}"
                        class="btn btn-sm btn-outline-primary">
@@ -194,7 +192,7 @@
             </tr>
         @empty
             <tr>
-                <td colspan="8">No data found for this filter.</td>
+                <td colspan="7">No data found for this filter.</td>
             </tr>
         @endforelse
     </tbody>

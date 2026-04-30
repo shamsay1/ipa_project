@@ -15,6 +15,12 @@ use Maatwebsite\Excel\Concerns\SkipsEmptyRows;
 class StudentImport implements ToModel, WithHeadingRow, SkipsOnFailure, SkipsEmptyRows
 {
     use SkipsFailures;
+    protected $branchId;
+
+    public function __construct($branchId)
+    {
+        $this->branchId = $branchId;
+    }
 
    public function model(array $row)
 {
@@ -41,6 +47,8 @@ class StudentImport implements ToModel, WithHeadingRow, SkipsOnFailure, SkipsEmp
         'course_id'   => $course ? $course->id : null,
         'semester_id' => $semester ? $semester->id : null,
         'nta'         => $row['nta_level'],
+        "branch_id"    => $this->branchId,
+
     ]);
 }
 }

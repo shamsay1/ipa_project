@@ -201,6 +201,7 @@ unset($__errorArgs, $__bag); ?>
                         <option value="">-- Select Practical --</option>
                         <option value="Normal">Normal</option>
                         <option value="Computer">Computer Lab</option>
+                        <option value="Typing Room">Typing Room</option>
 
                     </select>
                     <?php $__errorArgs = ["type"];

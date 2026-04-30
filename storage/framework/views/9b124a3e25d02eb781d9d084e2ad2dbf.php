@@ -101,6 +101,8 @@
  <div id="content">
         <div class="table-container p-3">
             <div class="col-md-7 d-flex flex-wrap align-items-center mb-3 mb-md-0 gap-2">
+            <?php if($systemTimetable->status != "created"): ?>
+
                 <form action="<?php echo e(route('timetable.solveConflicts')); ?>" method="POST">
         <?php echo csrf_field(); ?>
         <button type="submit" class="btn btn-success">
@@ -127,19 +129,115 @@
 Sync Shared Subjects
 </button>
 
+<div class="modal fade" id="fixCreditModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title">Fix Missing Subjects</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+
+                <form id="fixForm">
+                    <?php echo csrf_field(); ?>
+
+                    <!-- SUBJECT DROPDOWN -->
+                    <div class="mb-3">
+                        <label>Select Subject</label>
+                        <select name="subject_id" id="subjectSelect" class="form-control">
+                            <option value="">-- Select Subject --</option>
+                            <?php $__currentLoopData = $reports['subject_credit_hour_conflicts']; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $s): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                <?php if($s->conflict_type == 'MISSING'): ?>
+                                    <option value="<?php echo e($s->id); ?>">
+                                        <?php echo e($s->subjectName); ?> (Missing: <?php echo e($s->credit_hour - $s->actual_lessons); ?>)
+                                    </option>
+                                <?php endif; ?>
+                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                        </select>
+                    </div>
+
+                    <!-- AUTO SUGGEST AREA -->
+                    <div id="suggestedSlots"></div>
+
+                </form>
+
+            </div>
+
+        </div>
+    </div>
+</div>
+
 </form>
+<?php endif; ?>
+
         
     </div>
 
 
-            <div class="alert alert-dismissible fade show flash-message" role="alert">
-  <div class="d-flex align-items-center">
-    <i class="bi bi-check-circle-fill me-2"></i> <div class="flex-grow-1">
-      <h6 class="alert-heading mb-1">conflicts Validation details</h6>
-      <p class="mb-0" style="color: green"><?php echo e(session('success')); ?></p>
+     <div class="modal fade" id="fixModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title">Fix Missing Subjects</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+
+                <div class="table-container p-3">
+
+                    <!-- SUBJECT SELECT -->
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label>Select Subject</label>
+                            <select id="subjectSelect" class="form-control">
+                                <option value="">-- Select Subject --</option>
+
+                                <?php $__currentLoopData = $reports['subject_credit_hour_conflicts']; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $s): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                    <?php if($s->conflict_type == 'MISSING'): ?>
+                                        <option value="<?php echo e($s->id); ?>">
+                                            <?php echo e($s->subjectName); ?> 
+                                            (<?php echo e($s->courseName); ?> - NTA <?php echo e($s->nta_level); ?>) 
+                                            | Missing: <?php echo e($s->credit_hour - $s->actual_lessons); ?>
+
+                                        </option>
+                                    <?php endif; ?>
+                                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- SOLUTIONS TABLE -->
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>Day</th>
+                                    <th>Time</th>
+                                    <th>Room</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="solutionsTable">
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted">
+                                        Select subject to see suggestions
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
     </div>
-    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-  </div>
 </div>
            <h3 style="text-align: center;font-family: 'Times New Roman', Times, serif;color: green">Timetable Validation Report</h3>
     <p><strong style="color: green">Overall Score: <span class="fw-bold"><?php echo e($score); ?>%</span></strong></p>
@@ -188,6 +286,106 @@ Sync Shared Subjects
             
         </div>
     </div>
+  
+
+<script>
+document.getElementById('subjectSelect').addEventListener('change', function () {
+
+    let subject_id = this.value;
+
+    fetch('/check-solutions', {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "X-CSRF-TOKEN": "<?php echo e(csrf_token()); ?>"
+        },
+        body: JSON.stringify({
+            subject_id: subject_id,
+            timetable_id: 0
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+
+        let daySelect = document.getElementById('daySelect');
+        let slotSelect = document.getElementById('slotSelect');
+        let roomSelect = document.getElementById('roomSelect');
+
+        daySelect.innerHTML = '<option value="">-- Select Day --</option>';
+        slotSelect.innerHTML = '<option value="">-- Select Time --</option>';
+        roomSelect.innerHTML = '<option value="">-- Select Room --</option>';
+
+        data.solutions.forEach(sol => {
+
+            daySelect.innerHTML += `<option value="${sol.day_id}">${sol.day_name}</option>`;
+            slotSelect.innerHTML += `<option value="${sol.slot_id}">${sol.slot_time}</option>`;
+            roomSelect.innerHTML += `<option value="${sol.room_id}">${sol.room_name}</option>`;
+
+        });
+
+    });
+});
+</script>
+<script>
+function addTimetable()
+{
+    let subject_id = document.getElementById('subjectSelect').value;
+    let value = document.getElementById('solutionSelect').value;
+
+    if(!value){
+        alert("Select slot first");
+        return;
+    }
+
+    let parts = value.split("|");
+
+    fetch('/insert-timetable', {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "X-CSRF-TOKEN": "<?php echo e(csrf_token()); ?>"
+        },
+        body: JSON.stringify({
+            subject_id: subject_id,
+            day_id: parts[0],
+            timeslot_id: parts[1],
+            room_id: parts[2]
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        alert(data.message);
+        location.reload();
+    });
+}
+</script>
+<script>
+function insertTimetable(day_id, slot_id, room_id)
+{
+    let subject_id = document.getElementById('subjectSelect').value;
+
+    fetch(`/insert-timetable`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "X-CSRF-TOKEN": "<?php echo e(csrf_token()); ?>"
+        },
+        body: JSON.stringify({
+            subject_id: subject_id,
+            day_id: day_id,
+            timeslot_id: slot_id,
+            room_id: room_id
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        alert(data.message);
+        location.reload();
+    });
+}
+</script>
+
+
 
 <?php $__env->stopSection(); ?>
 <?php echo $__env->make("layout.app", array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH C:\Users\PC\Documents\Timetable\resources\views/timetable/validation.blade.php ENDPATH**/ ?>

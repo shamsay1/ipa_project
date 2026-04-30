@@ -32,7 +32,7 @@ class ClassExportTemplate implements FromCollection, WithHeadings, WithEvents
             "capacity",
             "building_code",        // B (dropdown: Normal, Hall)
             "type",       // D
-            "practical_type"   // E (dropdown: Computer, Work shop, Mechanics, Civil lab)
+            "practical_type"   
         ];
     }
 
@@ -47,15 +47,7 @@ class ClassExportTemplate implements FromCollection, WithHeadings, WithEvents
             AfterSheet::class => function(AfterSheet $event) {
                 $sheet = $event->sheet->getDelegate();
 
-                // --- validation for "capacity" column (B) ---
-                $capacityValidation = new DataValidation();
-                $capacityValidation->setType(DataValidation::TYPE_LIST);
-                $capacityValidation->setErrorStyle(DataValidation::STYLE_STOP);
-                $capacityValidation->setAllowBlank(false);
-                $capacityValidation->setShowInputMessage(true);
-                $capacityValidation->setShowErrorMessage(true);
-                $capacityValidation->setShowDropDown(true);
-                $capacityValidation->setFormula1('"Normal,Hall"');
+                
 
                 // --- validation for "type" column (C) ---
                 $typeValidation = new DataValidation();
@@ -75,13 +67,12 @@ class ClassExportTemplate implements FromCollection, WithHeadings, WithEvents
                 $practicalValidation->setShowInputMessage(true);
                 $practicalValidation->setShowErrorMessage(true);
                 $practicalValidation->setShowDropDown(true);
-                $practicalValidation->setFormula1('"Normal,Computer Lab,Electronics Lab,Engineering Drawing Lab,Civil Materials Lab,Clinical Chemistry Lab,Biochemistry Lab,Microbiology Lab"');
+                $practicalValidation->setFormula1('"Normal,Computer"');
 
 
                 // Apply validations for rows 2..1000
                 for ($i = 2; $i <= 1000; $i++) {
                     // Column B = capacity
-                    $sheet->getCell("B{$i}")->setDataValidation(clone $capacityValidation);
                     // Column C = type
                     $sheet->getCell("D{$i}")->setDataValidation(clone $typeValidation);
                     // Column E = practical_type

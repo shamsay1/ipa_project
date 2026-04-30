@@ -20,6 +20,7 @@ use App\Http\Controllers\{
     StudentController,
     TimetableGeneratorController
 };
+use Illuminate\Support\Facades\Auth;
 
 /*
 |--------------------------------------------------------------------------
@@ -27,10 +28,7 @@ use App\Http\Controllers\{
 |--------------------------------------------------------------------------
 */
 
-Route::get('/export-course-rooms-template', function () {
-    return Excel::download(new Course_RoomsExport, 'course_rooms_template.xlsx');
-});
-Route::post('/import-course-rooms', [CourseRoomController::class, 'importCourseRooms'])->name("cimport");
+
 
 Route::get("/lessons",[CrInfoController::class,"lessons"])->name("lessons");
 
@@ -61,11 +59,19 @@ Route::post('/reset-password', [ResestController::class, 'updatePassword'])->nam
 */
 
 Route::middleware(['auth:teacher', 'admin'])->group(function () {
+Route::post('/import-course-rooms', [CourseRoomController::class, 'importCourseRooms'])->name("cimport");
+    Route::get('/export-course-rooms-template', function () {
+    return Excel::download(new Course_RoomsExport(Auth::user()->branch_id), 'course_rooms_template.xlsx');
+});
+    Route::get("/teachettbl",[TeacherController::class,"teacherTimetable"])->name("teachettbl");
 
+    Route::get("/teachersub1",[TeacherController::class,"teachersubjects1"])->name("teachersub1");
     Route::get("/dash",[LoginController::class,"showDash"])->name("dash");
     Route::post('/sync-group-subjects',
     [TimetableGeneratorController::class,'syncGroupSubjects'])
     ->name('sync.group.subjects');
+    Route::post('/check-solutions', [TimetableGeneratorController::class, 'checkSolutions']);
+Route::post('/insert-timetable', [TimetableGeneratorController::class, 'insertTimetable']);
     Route::post('/send-email', [TimetableGeneratorController::class, 'sendEmail'])
     ->name('send.email');
     Route::resource("/teachers",TeacherController::class);
@@ -78,8 +84,12 @@ Route::middleware(['auth:teacher', 'admin'])->group(function () {
     ->name('teacher.subjects');
     Route::post("/timetable/enable",[TimetableGeneratorController::class,"enable"]);
     Route::post("/timetable/disable",[TimetableGeneratorController::class,"disable"]);
-
+   Route::get('/print-all-timetables', [TimetableGeneratorController::class, 'printAll'])
+    ->name('print.all.timetables');
+    Route::get('/print-teachers', [TimetableGeneratorController::class, 'printAllTeachers'])
+    ->middleware('auth')->name('print.all.teachers');
 });
+
 
 /*
 |--------------------------------------------------------------------------

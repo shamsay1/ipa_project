@@ -704,7 +704,7 @@ function openEmailModal(btn){
 
                                                         <strong>${entry.subjectName}</strong><br>
 
-                                                        ${entry.firstname} ${entry.lastname}<br>
+                                                        ${entry.firstname} ${entry.middlename} ${entry.lastname}<br>
 
                                                         ${entry.room_name}
 
@@ -743,4 +743,4 @@ function openEmailModal(btn){
             }
             </style>
 
-            @endsection
+@endsection

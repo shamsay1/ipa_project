@@ -7,6 +7,7 @@ use App\Models\Room;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Events\AfterSheet;
+use Illuminate\Support\Facades\Auth;
 
 class Course_RoomsExport implements WithHeadings, WithEvents
 {
@@ -20,6 +21,12 @@ class Course_RoomsExport implements WithHeadings, WithEvents
         ];
     }
 
+    protected $branchId;
+
+    public function __construct($branchId)
+    {
+        $this->branchId = $branchId;
+    }
     public function registerEvents(): array
     {
         return [
@@ -41,8 +48,10 @@ class Course_RoomsExport implements WithHeadings, WithEvents
                 })
                 ->toArray();
                 $ntas = ['NTA-4', 'NTA-5', 'NTA-6', 'NTA-7', 'NTA-8'];
-
+                $teacher = Auth::user();
+                
                 $rooms = Room::whereNotNull('name')
+                            ->where("branch_id",$this->branchId)
                             ->pluck('name')
                             ->toArray();
                 $courseList = '"' . implode(',', $courses) . '"';

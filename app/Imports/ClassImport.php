@@ -15,10 +15,16 @@ use Maatwebsite\Excel\Concerns\ToCollection;
 class ClassImport implements ToModel, WithHeadingRow, WithValidation, SkipsOnFailure, ToCollection
 {
     use SkipsFailures;
+    protected $branchId;
+
+    public function __construct($branchId)
+    {
+        $this->branchId = $branchId;
+    }
 
     public function collection(Collection $rows)
     {
-        // Check for duplicate class names within the file
+        
         $classNames = [];
         foreach ($rows as $index => $row) {
             $classname = trim($row['classname']);
@@ -45,6 +51,8 @@ class ClassImport implements ToModel, WithHeadingRow, WithValidation, SkipsOnFai
             "type" => $row['type'],
             "practical_type" => $row['practical_type'],
             "building_id" => $building ? $building->id : null,
+            "branch_id"    => $this->branchId,
+
         ]);
     }
 
@@ -52,7 +60,7 @@ class ClassImport implements ToModel, WithHeadingRow, WithValidation, SkipsOnFai
     {
         return [
             '*.classname'      => 'required|string|max:100',
-            '*.capacity'       => 'required|string',
+            '*.capacity'       => 'required',
             '*.type'           => 'required|string|max:50',
             '*.practical_type' => 'nullable|string|max:50',
             '*.building_code'  => 'required|exists:buildings,building_code',

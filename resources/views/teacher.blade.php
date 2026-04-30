@@ -240,7 +240,7 @@
                 <th>Gender</th>
                 <th>Email</th>
                 <th>Phone Number</th>
-                <th>CODE</th>
+                {{-- <th>CODE</th> --}}
                 <th>Role</th>
                 <th>Status</th>
                 <th>Action</th>

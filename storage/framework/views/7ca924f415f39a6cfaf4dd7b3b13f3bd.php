@@ -122,7 +122,7 @@
             padding: 0.375rem 0.75rem !important;
         }
 </style>
----
+
 <?php $__env->startSection("content"); ?>
 <div id="content">
     <div class="table-container p-3">
@@ -450,6 +450,8 @@ return $sub->semester->semName;
 
         <?php echo e($subject->teacher->firstname); ?>
 
+        <?php echo e($subject->teacher->middlename); ?>
+
         <?php echo e($subject->teacher->lastname); ?>
 
 
@@ -626,6 +628,8 @@ return $sub->semester->semName;
 <td>
 
 <?php echo e($subject->teacher->firstname); ?>
+
+<?php echo e($subject->teacher->middlename); ?>
 
 <?php echo e($subject->teacher->lastname); ?>
 
