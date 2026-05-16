@@ -571,6 +571,7 @@ function openEmailModal(btn){
                 const timetableData = JSON.parse(button.getAttribute("data-timetable"));
 
                 const courseName = button.getAttribute("data-course") || "";
+                
                 const ntaLevel = button.getAttribute("data-nta") || "";
                 const groupName = button.getAttribute("data-group") || "";
                 const semester = button.getAttribute("data-semester") || "";
@@ -660,7 +661,16 @@ function openEmailModal(btn){
 
                     <body onload="window.print();window.close();">
 
-                        <h2>THE INSTITUTE OF PUBLIC AND ADMINISTRATION</h2>
+                        <h2>THE INSTITUTE OF PUBLIC AND ADMINISTRATION</h2><br>
+                        <span style="font-style: italic">Generated on
+                            ${
+                                new Date().toLocaleDateString('en-GB', {
+                                    day: '2-digit',
+                                    month: 'long',
+                                    year: 'numeric'
+                                })
+                            }
+                        </span>
 
                         <h4>
                             ${courseName.toUpperCase()} - ${ntaLevel.toUpperCase()}

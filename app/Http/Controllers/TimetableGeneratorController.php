@@ -11,6 +11,7 @@ use App\Models\Department;
 use App\Models\Loggins;
 use App\Models\Room;
 use App\Models\Subject;
+use PhpOffice\PhpWord\PhpWord;
 use App\Models\SystemTimetable;
 use App\Models\Teacher;
 use App\Models\Timeslot;
@@ -18,6 +19,7 @@ use App\Models\Timetable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use PhpOffice\PhpWord\IOFactory;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Symfony\Component\Process\Process;
 use Maatwebsite\Excel\Facades\Excel;
@@ -1838,8 +1840,6 @@ public function viewTeacherTimetable($id)
         ->orderBy('days.id')
         ->orderBy('timeslots.start_time')
         ->get();
-
-    // 🔥 GROUP LOGIC
     $processed = $entries->groupBy(function ($item) {
 
         // kama kuna group_name → group kwa hiyo
@@ -1876,7 +1876,7 @@ public function viewTeacherTimetable($id)
             ? $prefix . $courses->implode(' + ')
             : $prefix . $courses->first();
 
-        // 🔥 SUBJECT NAME LOGIC
+      
         $subjectDisplay = !empty($first->group_name)
             ? strtoupper($first->group_name)
             : $first->subjectName;
@@ -2652,6 +2652,131 @@ public function sendEmail(Request $request)
     return back()->with("success","Email sent successfully to Teacher and CR");
 }
 
+
+
+           public function exportTeachersSubjects()
+{
+    // 🔥 FETCH FULL DATA (no GROUP_CONCAT now)
+    $teachers = DB::table('subjects')
+        ->join('teachers', 'subjects.teacher_id', '=', 'teachers.id')
+        ->join('courses', 'subjects.course_id', '=', 'courses.id')
+        ->join('semesters', 'subjects.semester_id', '=', 'semesters.id')
+        ->select(
+            'teachers.id as teacher_id',
+            DB::raw("CONCAT(teachers.firstname,' ',teachers.middlename,' ',teachers.lastname) as teacher_name"),
+            'subjects.subjectName',
+            'subjects.subjectCode',
+            'subjects.group_name',
+            'subjects.nta_level',
+            'courses.short_name',
+            'semesters.semName'
+        )
+        ->where('subjects.branch_id', Auth::user()->branch_id)
+        ->orderBy('teachers.id')
+        ->get()
+        ->groupBy('teacher_id'); // 🔥 muhimu sana
+
+    // 🧾 WORD
+    $phpWord = new PhpWord();
+
+    $section = $phpWord->addSection([
+        'orientation' => 'landscape',
+        'marginLeft' => 600,
+        'marginRight' => 600,
+        'marginTop' => 600,
+        'marginBottom' => 600,
+    ]);
+
+    $section->addText(
+        'RIPOTI YA WALIMU NA MASOMO YAO',
+        ['bold' => true, 'size' => 16],
+        ['alignment' => 'center']
+    );
+
+    $section->addTextBreak(1);
+
+    $phpWord->addTableStyle('myTable', [
+        'borderSize' => 6,
+        'borderColor' => '000000',
+        'cellMargin' => 80
+    ]);
+
+    $table = $section->addTable('myTable');
+
+    // HEADER
+    $table->addRow();
+    $table->addCell(4000)->addText('JINA LA MWALIMU', ['bold' => true]);
+    $table->addCell(12000)->addText('MASOMO ANAYOFUNDISHA', ['bold' => true]);
+
+    // 🔥 LOOP TEACHERS
+    foreach ($teachers as $teacherSubjects) {
+
+        $table->addRow();
+
+        // teacher name
+        $teacherName = $teacherSubjects->first()->teacher_name;
+        $table->addCell(4000)->addText($teacherName);
+
+        $cell = $table->addCell(12000);
+
+        // 🔥 GROUP BY group_name (MIXED WITH logic)
+        $grouped = $teacherSubjects->groupBy(function ($item) {
+            return $item->group_name ?? uniqid(); // kama hakuna group, iwe unique
+        });
+
+        $counter = 1;
+
+        foreach ($grouped as $group) {
+
+            $subjectsText = [];
+
+            foreach ($group as $item) {
+
+                // 🔥 NTA PREFIX
+                $prefix = match($item->nta_level) {
+                    "NTA-4" => 'BTC',
+                    "NTA-5" => 'TC',
+                    "NTA-6" => 'OD',
+                    "NTA-7" => 'HD',
+                    "NTA-8" => 'B',
+                    default => ''
+                };
+
+                // 🔥 ROMAN SEMESTER
+                $roman = match(true) {
+                    str_contains($item->semName, '1') => 'I',
+                    str_contains($item->semName, '2') => 'II',
+                    str_contains($item->semName, '3') => 'III',
+                    str_contains($item->semName, '4') => 'IV',
+                    default => ''
+                };
+
+                // 🔥 FINAL FORMAT
+                $formatted =
+                    $item->subjectCode . ' ' .
+                    strtoupper($item->subjectName) . ' (' .
+                    $prefix . strtoupper($item->short_name) . $roman . ')';
+
+                $subjectsText[] = $formatted;
+            }
+
+            // 🔥 MIXED WITH
+            $finalLine = implode(' MIXED WITH ', $subjectsText);
+
+            $cell->addText($counter . '. ' . $finalLine);
+
+            $counter++;
+        }
+    }
+
+    // SAVE
+    $tempFile = tempnam(sys_get_temp_dir(), 'word');
+
+$writer = IOFactory::createWriter($phpWord, 'Word2007');
+$writer->save($tempFile);
+
+return response()->download($tempFile, 'teachers_subjects.docx')->deleteFileAfterSend(true);
+}
    
 
 

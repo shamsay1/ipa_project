@@ -210,6 +210,7 @@ Sync Shared Subjects
                             </select>
                         </div>
                     </div>
+                 
 
                     <!-- SOLUTIONS TABLE -->
                     <div class="table-responsive">
@@ -239,6 +240,9 @@ Sync Shared Subjects
         </div>
     </div>
 </div>
+   <button><a href="<?php echo e(url('/export-teachers-subjects')); ?>" class="btn btn-success">
+    Download Word
+</a></button>
            <h3 style="text-align: center;font-family: 'Times New Roman', Times, serif;color: green">Timetable Validation Report</h3>
     <p><strong style="color: green">Overall Score: <span class="fw-bold"><?php echo e($score); ?>%</span></strong></p>
         <?php

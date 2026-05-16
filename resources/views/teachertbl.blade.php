@@ -388,7 +388,7 @@ function printTeacherTimetable(button) {
     printWindow.document.write(`
     <html>
     <head>
-        <title>Teacher ${teacherName} Timetable</title>
+        <title>Teacher ${teacherName}-last updated Timetable</title>
         <style>
             @page { margin:0 }
             body{ margin:40px; font-family:'Times New Roman'; }

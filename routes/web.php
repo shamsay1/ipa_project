@@ -64,7 +64,7 @@ Route::post('/import-course-rooms', [CourseRoomController::class, 'importCourseR
     return Excel::download(new Course_RoomsExport(Auth::user()->branch_id), 'course_rooms_template.xlsx');
 });
     Route::get("/teachettbl",[TeacherController::class,"teacherTimetable"])->name("teachettbl");
-
+    Route::get('/roomreport',[ReportController::class,"roomReport"])->name("roomReport");
     Route::get("/teachersub1",[TeacherController::class,"teachersubjects1"])->name("teachersub1");
     Route::get("/dash",[LoginController::class,"showDash"])->name("dash");
     Route::post('/sync-group-subjects',
@@ -88,6 +88,7 @@ Route::post('/insert-timetable', [TimetableGeneratorController::class, 'insertTi
     ->name('print.all.timetables');
     Route::get('/print-teachers', [TimetableGeneratorController::class, 'printAllTeachers'])
     ->middleware('auth')->name('print.all.teachers');
+    Route::get('/export-teachers-subjects', [TimetableGeneratorController::class, 'exportTeachersSubjects']);
 });
 
 

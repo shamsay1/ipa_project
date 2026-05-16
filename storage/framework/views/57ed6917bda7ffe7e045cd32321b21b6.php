@@ -449,6 +449,14 @@
                 <span>Room Utilization</span>
             </a>
         </li>
+        <li class="nav-item">
+            <a href="<?php echo e(route('roomReport')); ?>"
+               class="nav-link <?php echo e(Route::currentRouteName() == 'roomusage' ? 'active' : ''); ?>">
+                <i class="bi bi-building"></i>
+                <span>Room's Timetable</span>
+            </a>
+        </li>
+        
 
     </ul>
 </li>

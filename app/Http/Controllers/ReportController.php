@@ -2,8 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Day;
 use App\Models\Department;
+use App\Models\Room;
 use App\Models\Semester;
+use App\Models\Timeslot;
+use App\Models\Timetable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -58,7 +62,7 @@ public function teacherLoadReport(Request $request)
 
 foreach ($data->groupBy('teacher_id') as $teacherId => $lessons) {
 
-    // 🔥 HII NDIYO MUHIMU (Distinct days per week)
+   
     $totalTeachingDays = $lessons->pluck('day_id')->unique()->count();
 
     // Total Subjects
@@ -94,7 +98,7 @@ foreach ($data->groupBy('teacher_id') as $teacherId => $lessons) {
         }
     }
 
-    // 🔥 STATUS SASA INATEGEMEA TEACHING DAYS
+   
     $status = "Balanced";
 
     if ($totalTeachingDays <= 2) {
@@ -175,8 +179,6 @@ foreach ($data->groupBy('teacher_id') as $teacherId => $lessons) {
     public function index1(Request $request)
 {
     $departments = Department::all();
-
-    // 🔥 CHUKUA SEMESTER ZOTE ACTIVE
     $activeSemesters = Semester::where('status', 'Active')->pluck('id');
     $branchId = Auth::user()->branch_id;
     $reportType = $request->get('report_type');
@@ -217,7 +219,7 @@ foreach ($data->groupBy('teacher_id') as $teacherId => $lessons) {
 
     return view('roomusage', compact(
         'departments', 
-        'activeSemesters', // optional kama utahitaji view
+        'activeSemesters', 
         'reportType',
         'report',
         'days',
@@ -226,6 +228,59 @@ foreach ($data->groupBy('teacher_id') as $teacherId => $lessons) {
     ));
 }
 
+   public function roomReport(Request $request)
+{
+    $allRooms = Room::all();
+    $days = Day::all();
+    $timeslots = Timeslot::all();
+
+    $report = null;
+
+    if ($request->room_id) {
+
+        $selectedRoom = Room::find($request->room_id);
+        $timetable = DB::table('timetables')
+    ->leftJoin('subjects', 'timetables.subject_id', '=', 'subjects.id')
+    ->leftJoin('teachers', 'subjects.teacher_id', '=', 'teachers.id')
+    ->leftJoin('courses', 'subjects.course_id', '=', 'courses.id')
+    ->select(
+        'timetables.day_id',
+        'timetables.timeslot_id',
+        'teachers.firstname',
+        'teachers.lastname',
+        'subjects.subjectName',
+        'courses.short_name'
+    )
+    ->where('timetables.room_id', $request->room_id)
+    ->get();
+
+
+        $usageMap = [];
+
+foreach ($timetable as $item) {
+
+    $teacherName = trim(($item->firstname ?? '') . ' ' . ($item->lastname ?? ''));
+
+    $usageMap[$item->day_id][$item->timeslot_id] = [
+        'teacher' => $teacherName ?: 'No Teacher',
+        'subject' => $item->subjectName ?? 'N/A',
+        'course'  => $item->short_name ?? ''
+    ];
+}
+
+        $report = [
+            'selectedRoom' => $selectedRoom,
+            'usageMap' => $usageMap
+        ];
+    }
+
+    return view('roomreport', compact(
+        'allRooms',
+        'days',
+        'timeslots',
+        'report'
+    ));
+}
 
 
 
