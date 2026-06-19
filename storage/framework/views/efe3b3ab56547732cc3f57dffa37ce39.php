@@ -206,8 +206,8 @@
             <td><?php echo e($i++); ?></td>
             <td><?php echo e($se->semName); ?></td>
             <td><?php echo e($se->academic_year); ?></td>
-            <td><?php echo e($se->start_date); ?></td>
-            <td><?php echo e($se->end_date); ?></td>
+            <td><?php echo e(\Carbon\Carbon::parse($se->start_date)->format('d F Y')); ?></td>
+            <td><?php echo e(\Carbon\Carbon::parse($se->end_date)->format('d F Y')); ?></td>
             <td><?php echo e($se->semCode); ?></td>
             <td>
                 <?php if($se->status=="Active"): ?>
@@ -219,9 +219,108 @@
 
             </td>
             <td>
-                <a href="" class="btn btn-sm btn-outline-primary" title="Edit">
-                                    <i class="bi bi-pencil-square"></i>
-                                </a>
+                 <button
+        class="btn btn-sm btn-primary editBtn"
+        data-id="<?php echo e($se->id); ?>"
+        data-semname="<?php echo e($se->semName); ?>"
+        data-academic_year="<?php echo e($se->academic_year); ?>"
+        data-start_date="<?php echo e($se->start_date); ?>"
+        data-end_date="<?php echo e($se->end_date); ?>"
+        data-semcode="<?php echo e($se->semCode); ?>"
+        data-bs-toggle="modal"
+        data-bs-target="#editSemesterModal">
+
+        <i class="bi bi-pencil-square"></i>
+    </button>
+    <div class="modal fade" id="editSemesterModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+
+            <form method="POST" id="editForm">
+                <?php echo csrf_field(); ?>
+                <?php echo method_field('PUT'); ?>
+
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit Semester</h5>
+
+                    <button
+                        type="button"
+                        class="btn-close"
+                        data-bs-dismiss="modal">
+                    </button>
+                </div>
+
+                <div class="modal-body">
+
+                    <input type="hidden" name="id" id="edit_id">
+
+                    <div class="mb-3">
+                        <label>Semester Name</label>
+                        <input
+                            type="text"
+                            name="semName"
+                            id="edit_semName"
+                            class="form-control">
+                    </div>
+
+                    <div class="mb-3">
+                        <label>Academic Year</label>
+                        <input
+                            type="text"
+                            name="academic_year"
+                            id="edit_academic_year"
+                            class="form-control">
+                    </div>
+
+                    <div class="mb-3">
+                        <label>Start Date</label>
+                        <input
+                            type="date"
+                            name="start_date"
+                            id="edit_start_date"
+                            class="form-control">
+                    </div>
+
+                    <div class="mb-3">
+                        <label>End Date</label>
+                        <input
+                            type="date"
+                            name="end_date"
+                            id="edit_end_date"
+                            class="form-control">
+                    </div>
+
+                    <div class="mb-3">
+                        <label>Semester Code</label>
+                        <input
+                            type="text"
+                            name="semCode"
+                            id="edit_semCode"
+                            class="form-control">
+                    </div>
+
+                </div>
+
+                <div class="modal-footer">
+                    <button
+                        type="button"
+                        class="btn btn-secondary"
+                        data-bs-dismiss="modal">
+                        Close
+                    </button>
+
+                    <button
+                        type="submit"
+                        class="btn btn-primary">
+                        Update
+                    </button>
+                </div>
+
+            </form>
+
+        </div>
+    </div>
+</div>
     
     <!-- Button (trigger modal) -->
 <a href="#" 
@@ -282,6 +381,33 @@ document.addEventListener('DOMContentLoaded', function () {
             
         </div>
     </div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+    const editButtons = document.querySelectorAll('.editBtn');
+    const form = document.getElementById('editForm');
+
+    editButtons.forEach(button => {
+
+        button.addEventListener('click', function () {
+
+            let id = this.dataset.id;
+
+            form.action = "/semester/" + id;
+
+            document.getElementById('edit_id').value = id;
+            document.getElementById('edit_semName').value = this.dataset.semname;
+            document.getElementById('edit_academic_year').value = this.dataset.academic_year;
+            document.getElementById('edit_start_date').value = this.dataset.start_date;
+            document.getElementById('edit_end_date').value = this.dataset.end_date;
+            document.getElementById('edit_semCode').value = this.dataset.semcode;
+
+        });
+
+    });
+
+});
+</script>
 
 <?php $__env->stopSection(); ?>
 <?php echo $__env->make("layout.app", array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH C:\Users\PC\Documents\Timetable\resources\views/semester.blade.php ENDPATH**/ ?>

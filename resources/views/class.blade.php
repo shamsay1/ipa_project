@@ -168,19 +168,8 @@
                 </div>
             </div>
             <div class="row">
-                <div class="col-md-6">
-                    <label for="mobile" class="form-label">FLOOR</label>
-                    <select name="building_id" class="form-select">
-                        <option value="">-- Select Type --</option>
-                        @foreach ($buildings as $bu)
-                        <option value="{{ $bu->id}}">{{ $bu->building_name }}</option>
-                            
-                        @endforeach
-
-
-                    </select>
-                </div>
-                <div class="col-md-6">
+                
+                <div class="col-md-12">
                     <label for="gender" class="form-label">Practical Type</label>
                     <select class="form-select" name="practical_type">
                         

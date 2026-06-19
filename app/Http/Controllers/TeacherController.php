@@ -139,7 +139,7 @@ public function TeacherImport(Request $request)
     ]);
     Loggins::create([
         'title' => 'New Registration',
-        'action' => 'New Teacher '.$request->firstname."  ".$request->lastname." is registered",
+        'action' => 'New Teacher '.$request->firstname."  ".$request->middlename." is registered",
     ]);
 
     if ($teacher) {
@@ -216,14 +216,23 @@ public function TeacherImport(Request $request)
     public function teacherDash(){
          $teacher = Auth::user();
 
-    // Idadi ya masomo anayofundisha
-    $subjectCount = DB::table('subjects')
-         ->join("semesters","subjects.semester_id","semesters.id")
-        ->where('teacher_id', $teacher->id)
-         ->where("semesters.status","Active")
-        ->count();
 
-    // Idadi ya vipindi anavyofundisha (jumla)
+    $subjectCount = DB::table('subjects')
+    ->join('semesters', 'subjects.semester_id', '=', 'semesters.id')
+    ->where('teacher_id', $teacher->id)
+    ->where('semesters.status', 'Active')
+    ->selectRaw("
+        COUNT(
+            DISTINCT
+            CASE
+                WHEN subjects.group_name IS NOT NULL
+                THEN CONCAT('GROUP_', subjects.group_name)
+                ELSE CONCAT('SUBJECT_', subjects.id)
+            END
+        ) as total_subjects
+    ")
+    ->value('total_subjects');
+
     $periodCount = DB::table('timetables')
     ->join('subjects', 'timetables.subject_id', '=', 'subjects.id')
     ->join('semesters', 'subjects.semester_id', '=', 'semesters.id')
@@ -425,31 +434,54 @@ public function TeacherImport(Request $request)
             'subjects.subjectCode',
             'subjects.group_name',
             'courses.short_name',
-            'subjects.nta_level'
+            'subjects.nta_level',
+            'semesters.semName'
         )
         ->where('subjects.teacher_id', $teacher->id)
         ->where('subjects.branch_id', $teacher->branch_id)
-        ->where("semesters.status", "Active")
+        ->where('semesters.status', 'Active')
         ->get();
 
     $grouped = [];
 
     foreach ($subjectsRaw as $item) {
 
-        // PREFIX ya NTA
+        // NTA Prefix
         $prefix = '';
         switch ($item->nta_level) {
-            case "NTA-4": $prefix = 'BTC'; break;
-            case "NTA-5": $prefix = 'TC'; break;
-            case "NTA-6": $prefix = 'OD'; break;
-            case "NTA-7": $prefix = 'HD'; break;
-            case "NTA-8": $prefix = 'B'; break;
+            case "NTA-4":
+                $prefix = 'BTC';
+                break;
+            case "NTA-5":
+                $prefix = 'TC';
+                break;
+            case "NTA-6":
+                $prefix = 'OD';
+                break;
+            case "NTA-7":
+                $prefix = 'HD';
+                break;
+            case "NTA-8":
+                $prefix = 'B';
+                break;
         }
 
-        // COURSE FULL (BTCPA)
-        $fullCourse = $prefix . $item->short_name;
+        // Semester Roman
+        $semesterRoman = '';
 
-        // KEY
+        if (str_contains($item->semName, '1')) {
+            $semesterRoman = 'I';
+        } elseif (str_contains($item->semName, '2')) {
+            $semesterRoman = 'II';
+        } elseif (str_contains($item->semName, '3')) {
+            $semesterRoman = 'III';
+        } elseif (str_contains($item->semName, '4')) {
+            $semesterRoman = 'IV';
+        }
+
+        // Mfano: BTCPA-I
+        $fullCourse = $prefix . $item->short_name .$semesterRoman;
+
         $key = $item->group_name ?? $item->subjectName;
 
         if (!isset($grouped[$key])) {
@@ -460,14 +492,13 @@ public function TeacherImport(Request $request)
             ];
         }
 
-        // epuka duplicate
         if (!in_array($fullCourse, $grouped[$key]['courses'])) {
             $grouped[$key]['courses'][] = $fullCourse;
         }
     }
 
-    return view("teachersubject", [
-        "subjects" => array_values($grouped)
+    return view('teachersubject', [
+        'subjects' => array_values($grouped)
     ]);
 }
  public function teacherTimetable()
@@ -777,55 +808,109 @@ public function supervision()
     $teacher = Auth::user();
 
     $entries = DB::table('timetables')
+
         ->join('days', 'timetables.day_id', '=', 'days.id')
+
         ->join('subjects', 'timetables.subject_id', '=', 'subjects.id')
+
         ->join('courses', 'subjects.course_id', '=', 'courses.id')
-        ->join('teachers', 'timetables.teacher_id', '=', 'teachers.id')
+
+        ->join('teachers', 'subjects.teacher_id', '=', 'teachers.id')
+
         ->join('rooms', 'timetables.room_id', '=', 'rooms.id')
+
         ->join('timeslots', 'timetables.timeslot_id', '=', 'timeslots.id')
-        ->join('semesters', 'subjects.semester_id', '=', 'semesters.id') 
+
+        ->join('semesters', 'subjects.semester_id', '=', 'semesters.id')
 
         ->leftJoin('teacher_attendances', function ($join) use ($todayDate) {
-            $join->on('timetables.id', '=', 'teacher_attendances.timetable_id')
-                 ->where('teacher_attendances.date', '=', $todayDate);
+
+            $join->on(
+                'timetables.id',
+                '=',
+                'teacher_attendances.timetable_id'
+            )
+            ->whereDate(
+                'teacher_attendances.date',
+                $todayDate
+            );
         })
 
         ->where('days.day_name', $todayName)
-        ->where('timetables.branch_id', $teacher->branch_id)
-        ->where('semesters.status', 'Active') 
+
+        ->where('subjects.branch_id', $teacher->branch_id)
+
+        ->where('semesters.status', 'Active')
 
         ->select(
+            'timetables.id as timetable_id',
+
             'courses.courseName',
-            'subjects.nta_level',
-            'semesters.semName as semester', 
-            'days.day_name as day',
-            'timeslots.start_time',
-            'timeslots.end_time',
+
+            'courses.short_name',
+
             'subjects.subjectName',
+
+            'subjects.subjectCode',
+
+            'subjects.nta_level',
+
+            'subjects.credit_hour',
+
+            'semesters.semName as semester',
+
+            'days.day_name as day',
+
+            'timeslots.start_time',
+
+            'timeslots.end_time',
+
             'teachers.firstname',
+
+            'teachers.middlename',
+
             'teachers.lastname',
+
             'rooms.name as room_name',
-            'teacher_attendances.status'
+
+            DB::raw("
+                COALESCE(
+                    teacher_attendances.status,
+                    'absent'
+                ) as status
+            ")
         )
+
         ->orderBy('courses.courseName')
+
         ->orderBy('subjects.nta_level')
-        ->orderBy('semesters.semName')
+
+        ->orderBy('semesters.id')
+
         ->orderBy('timeslots.start_time')
+
         ->get();
 
-    
     $timetable = $entries
         ->groupBy('courseName')
-        ->map(function ($course) {
-            return $course->groupBy('nta_level')
-                          ->map(function ($ntaGroup) {
-                              return $ntaGroup->groupBy('semester')
-                                              ->sortKeys(); // Sort by semester name
-                          })
-                          ->sortKeys(); // Sort NTA ascending (4,5,6...)
+        ->map(function ($courseGroup) {
+
+            return $courseGroup
+                ->groupBy('nta_level')
+                ->map(function ($ntaGroup) {
+
+                    return $ntaGroup
+                        ->groupBy('semester');
+                });
         });
 
-    return view("supervision", compact('timetable','todayName'));
+    return view(
+        'supervision',
+        compact(
+            'timetable',
+            'todayName'
+        )
+    );
 }
 public function teacherTimetable1()
 {

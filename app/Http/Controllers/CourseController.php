@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Exports\CourseExportTemplate;
 use App\Imports\CourseImport;
-use App\Models\Building;
 use App\Models\Department;
 use App\Models\Course;
 use App\Models\Loggins;
@@ -25,10 +24,7 @@ class CourseController extends Controller
             $dept->degree_courses  = $dept->courses->where('course_level', 'Degree')->values();
             $dept->diploma_courses = $dept->courses->where('course_level', 'Diploma')->values();
         }
-
-        $bui = Building::all();
-
-        return view("course", compact("depts", "deptCourses", "bui"));
+        return view("course", compact("depts", "deptCourses"));
     }
 
     public function export()
@@ -43,13 +39,15 @@ class CourseController extends Controller
             "deptId"         => "required",
             "courseCode"     => "required",
             "course_level"   => "required",
+            "short_name"   => "required",
         ]);
 
         Course::create([
             "courseName"     => $request->courseName,
             "deptId"         => $request->deptId,
             "course_code"    => $request->courseCode,
-            "course_level"   => $request->course_level
+            "course_level"   => $request->course_level,
+            "short_name"   => $request->short_name
         ]);
 
         return redirect()->back()->with("success", "New course is registered");
@@ -78,6 +76,7 @@ class CourseController extends Controller
             "courseName"     => "required",
             "course_code"    => "required",
             "deptId"         => "required",
+            "short_name" => "required"
         ]);
 
         $course = Course::findOrFail($id);
@@ -86,6 +85,7 @@ class CourseController extends Controller
             'courseName'     => $request->courseName,
             'course_code'    => $request->course_code,
             'deptId'         => $request->deptId,
+            'short_name'         => $request->short_name,
         ]);
 
         return redirect()->route("course.index")->with("success", "Course updated successfully");

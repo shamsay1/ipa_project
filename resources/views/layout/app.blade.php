@@ -458,13 +458,13 @@
             </a>
         </li>
 
-        <li class="nav-item">
+        {{-- <li class="nav-item">
             <a href="{{ url('/roomusage') }}"
                class="nav-link {{ Route::currentRouteName() == 'roomusage' ? 'active' : '' }}">
                 <i class="bi bi-building"></i>
                 <span>Room Utilization</span>
             </a>
-        </li>
+        </li> --}}
         <li class="nav-item">
             <a href="{{ route('roomReport') }}"
                class="nav-link {{ Route::currentRouteName() == 'roomusage' ? 'active' : '' }}">

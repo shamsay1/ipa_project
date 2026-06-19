@@ -105,15 +105,7 @@
         
     </div>
 
-    <div class="col-md-6">
-        <!-- Search Box -->
-        <div class="input-group">
-            <input type="text" class="form-control" placeholder="Search">
-            <button class="btn btn-outline-secondary" type="button">
-                <i class="bi bi-search"></i>
-            </button>
-        </div>
-    </div>
+    
 </div>
 
 
@@ -191,6 +183,8 @@
             <tr>
                 <th>S/N</th>
                 <th>Teacher's Name</th>
+                <th>Role</th>
+                <th>Required subjects</th>
                 <th>Total Subjects</th>
                 <th>Status</th>
             </tr>
@@ -200,6 +194,8 @@
                 <tr>
                     <td><?php echo e($index + 1); ?></td>
                     <td style="text-align: left"><?php echo e(strtoupper($row->teacher_name)); ?></td>
+                    <td><span class="badge bg-success"><?php echo e($row->role); ?></span></td>
+                    <td><?php echo e($row->required_subjects); ?></td>
                     <td><?php echo e($row->subject_count); ?></td>
                     <td>
                         <?php if($row->status == 'Overloaded'): ?>

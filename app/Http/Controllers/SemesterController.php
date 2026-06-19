@@ -53,6 +53,24 @@ class SemesterController extends Controller
 }
 
 
+
+    public function update(Request $request)
+{
+    $semester = Semester::findOrFail($request->id);
+
+    $semester->update([
+        'semName' => $request->semName,
+        'academic_year' => $request->academic_year,
+        'start_date' => $request->start_date,
+        'end_date' => $request->end_date,
+        'semCode' => $request->semCode,
+    ]);
+
+    return redirect()->back()
+        ->with('success', 'Semester updated successfully');
+}
+
+
       
 
 }

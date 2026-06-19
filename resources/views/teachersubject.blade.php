@@ -208,7 +208,7 @@
                 <img src="{{ asset('images/ipalogo1.png') }}" alt="" width="120">
             </div>
      <h3 style="text-align: center;margin-top: 10px">INSTITUTE OF PUBLIC AND ADMINISTRATION</h3>
-                <h5 style="text-align: center">TEACHER SUBJECT: <b>{{ Auth::user()->firstname }} {{ Auth::user()->lastname }}</b></h5><br>
+                <h5 style="text-align: center">TEACHER SUBJECT: <b>{{ Auth::user()->firstname }} {{ Auth::user()->middlename }} {{ Auth::user()->lastname }}</b></h5><br>
               <div class="table-responsive">
                 <table class="table table-hover">
                     <thead>

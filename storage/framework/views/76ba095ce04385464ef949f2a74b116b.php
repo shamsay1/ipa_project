@@ -214,7 +214,7 @@ INSTITUTE OF PUBLIC AND ADMINISTRATION
             <td><?php echo e($lesson->room_name ?? 'N/A'); ?></td>
 
             <td>
-                <?php echo e($lesson->firstname ?? ''); ?> <?php echo e($lesson->lastname ?? ''); ?>
+                <?php echo e($lesson->firstname ?? ''); ?> <?php echo e($lesson->middlename ?? ''); ?> <?php echo e($lesson->lastname ?? ''); ?>
 
             </td>
 
@@ -508,6 +508,17 @@ document.addEventListener('DOMContentLoaded', function () {
 
 });
 </script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<?php if(session('success')): ?>
+<script>
+Swal.fire({
+    icon: 'success',
+    title: 'Success!',
+    text: '<?php echo e(session('success')); ?>',
+    confirmButtonText: 'OK'
+});
+</script>
+<?php endif; ?>
 
 
 </body>

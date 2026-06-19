@@ -7,7 +7,6 @@ use Illuminate\Http\Request;
 use App\Models\Room;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Imports\ClassImport;
-use App\Models\Building;
 use Illuminate\Support\Facades\Auth;
 
 use App\Models\Loggins;
@@ -83,12 +82,11 @@ class RoomController extends Controller
 }
 
     $rooms = $query->paginate(10)->withQueryString();
-    $buildings = Building::all();
     if ($request->ajax()) {
         return view('partials.room_table', compact('rooms'))->render();
     }
 
-    return view('class', compact('rooms', 'buildings'));
+    return view('class', compact('rooms'));
 }
          public function destroy($id)
     {
@@ -111,14 +109,12 @@ class RoomController extends Controller
                 "capacity" => "required",
                 "type" => "required",
                 "practical_type" => "required",
-                "building_id" => "required"
             ]);
             $new_room = Room::create([
                 "name" => $request->classname,
                 "capacity" => $request->capacity,
                 "type" => $request->type,
                 "practical_type" => $request->practical_type,
-                "building_id" => $request->building_id,
                 "branch_id" => $branch,
             ]);
             if($new_room){

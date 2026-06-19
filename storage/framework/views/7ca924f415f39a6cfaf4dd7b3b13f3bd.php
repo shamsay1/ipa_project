@@ -190,7 +190,7 @@
     <select class="form-select" name="teacher" id="teacher_id" required>
         <option value=""></option>
         <?php $__currentLoopData = $teachers; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $teacher): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-            <option value="<?php echo e($teacher->id); ?>"><?php echo e($teacher->firstname); ?> <?php echo e($teacher->lastname); ?></option>
+            <option value="<?php echo e($teacher->id); ?>"><?php echo e($teacher->firstname); ?> <?php echo e($teacher->middlename); ?> <?php echo e($teacher->lastname); ?></option>
         <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
     </select>
 </div>

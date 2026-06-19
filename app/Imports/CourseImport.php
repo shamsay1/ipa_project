@@ -25,16 +25,12 @@ class CourseImport implements ToModel, WithHeadingRow, WithValidation
     public function model(array $row)
     {
     $dept = Department::where("dept_code", $row['dept_code'])->first();
-     $building = Building::where("building_code",$row['building_code'])->first();
     return new Course([
         "courseName"  => $row['course_name'],
         "course_code" => $row['course_code'],
         "short_name" => $row['short_name'],
         "deptId"      => $dept ? $dept->id : null,
         "course_level" => $row["course_level"],
-        "building_id" => $building->id, 
-        "username" => $row["username"],
-        "password" => Hash::make(trim($row['password']))
     ]);
     }
 

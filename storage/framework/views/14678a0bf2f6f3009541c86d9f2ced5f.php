@@ -7,9 +7,14 @@
 
     <td><?php echo e($teacher->email); ?></td>
     <td><?php echo e($teacher->mobile); ?></td>
-    
     <td><?php echo e($teacher->role); ?></td>
-    <td><?php echo e($teacher->status); ?></td>
+    <td>
+        <?php if($teacher->status=="Blocked"): ?>
+        <span class="badge bg-danger"><?php echo e($teacher->status); ?></span>
+        <?php else: ?>
+        <span class="badge bg-success"><?php echo e($teacher->status); ?></span>
+        <?php endif; ?>
+    </td>
     <td>
         <a href="<?php echo e(route('teachers.edit', $teacher->id)); ?>" class="btn btn-sm btn-outline-primary" title="Edit">
             <i class="bi bi-pencil-square"></i>

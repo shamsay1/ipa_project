@@ -190,7 +190,7 @@
     <select class="form-select" name="teacher" id="teacher_id" required>
         <option value=""></option>
         @foreach ($teachers as $teacher)
-            <option value="{{ $teacher->id }}">{{ $teacher->firstname }} {{ $teacher->lastname }}</option>
+            <option value="{{ $teacher->id }}">{{ $teacher->firstname }} {{ $teacher->middlename }} {{ $teacher->lastname }}</option>
         @endforeach
     </select>
 </div>

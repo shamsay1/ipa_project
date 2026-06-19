@@ -19,7 +19,7 @@ class SubjectController extends Controller
 {
     $teacher = Auth::user();
 
-    $teachers = Teacher::where("branch_id",$teacher->branch_id)->get();
+    $teachers = Teacher::where("branch_id",$teacher->branch_id)->orderBy("firstname")->get();
     $courses1 = Course::all();
 
 

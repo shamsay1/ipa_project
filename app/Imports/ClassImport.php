@@ -2,7 +2,6 @@
 
 namespace App\Imports;
 
-use App\Models\Building;
 use App\Models\Room;
 use Maatwebsite\Excel\Concerns\ToModel;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
@@ -43,14 +42,12 @@ class ClassImport implements ToModel, WithHeadingRow, WithValidation, SkipsOnFai
 
     public function model(array $row)
     {
-        $building = Building::where("building_code", $row['building_code'])->first();
 
         return new Room([
             "name" => $row['classname'],
             "capacity" => trim($row['capacity']),
             "type" => $row['type'],
             "practical_type" => $row['practical_type'],
-            "building_id" => $building ? $building->id : null,
             "branch_id"    => $this->branchId,
 
         ]);

@@ -117,7 +117,7 @@
 </div>
 </div>
 
-<!-- Modal for Adding Teacher -->
+<!-- Modal for Adding Course -->
 <div class="modal fade" id="addTeacherModal" tabindex="-1" aria-labelledby="addTeacherModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-lg">
     <div class="modal-content">
@@ -151,13 +151,17 @@
                             </div>
                              <div class="row mt-3">
                                 
-                                <div class="col-md-12">
+                                <div class="col-md-6">
                                     <label class="form-label">Course Level</label>
                                     <select class="form-select" name="course_level" required>
                                         <option value="">-- Select Course Level --</option>
                                         <option value="Diploma">Diploma Program</option>
                                         <option value="Degree">Degree Program</option>
                                     </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="" class="form-label">Abbreviation</label>
+                                    <input type="text" name="short_name" id="" class="form-control">
                                 </div>
                             </div>
                             
@@ -220,6 +224,7 @@
                             <th>C/N</th>
                             <th>Course Name</th>
                             <th>Course Code</th>
+                            <th>Abbreviation</th>
                             <th>Action</th>
                         </tr>
                     </thead>
@@ -229,6 +234,7 @@
                             <td><?php echo e($index + 1); ?></td>
                             <td><?php echo e($course->courseName); ?></td>
                             <td><?php echo e($course->course_code); ?></td>
+                            <td><?php echo e($course->short_name); ?></td>
                             <td>
                                 <a href="<?php echo e(route('course.edit', $course->id)); ?>"
                                     class="btn btn-sm btn-outline-primary">
@@ -263,6 +269,7 @@
                             <th>C/N</th>
                             <th>Course Name</th>
                             <th>Course Code</th>
+                            <th>Abbreviation</th>
                             <th>Action</th>
                         </tr>
                     </thead>
@@ -272,6 +279,7 @@
                             <td><?php echo e($index + 1); ?></td>
                             <td><?php echo e($course->courseName); ?></td>
                             <td><?php echo e($course->course_code); ?></td>
+                            <td><?php echo e($course->short_name); ?></td>
                             <td>
                                 <a href="<?php echo e(route('course.edit', $course->id)); ?>"
                                     class="btn btn-sm btn-outline-primary">

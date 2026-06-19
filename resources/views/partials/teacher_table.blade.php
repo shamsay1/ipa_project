@@ -7,9 +7,14 @@
 
     <td>{{ $teacher->email }}</td>
     <td>{{ $teacher->mobile }}</td>
-    {{-- <td>{{ $teacher->teacher_code }}</td> --}}
     <td>{{ $teacher->role}}</td>
-    <td>{{ $teacher->status }}</td>
+    <td>
+        @if ($teacher->status=="Blocked")
+        <span class="badge bg-danger">{{ $teacher->status }}</span>
+        @else
+        <span class="badge bg-success">{{ $teacher->status }}</span>
+        @endif
+    </td>
     <td>
         <a href="{{ route('teachers.edit', $teacher->id) }}" class="btn btn-sm btn-outline-primary" title="Edit">
             <i class="bi bi-pencil-square"></i>

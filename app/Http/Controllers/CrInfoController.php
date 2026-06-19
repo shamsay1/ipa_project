@@ -48,6 +48,7 @@ class CrInfoController extends Controller
         'lastname'=>$request->lastname,
         'mobile'=>$request->mobile,
         'email'=>$request->email,
+        "semester_id" => $request->semester_id,
         'course_id'=>$request->course_id,
         'nta'=>$request->nta
         ]);
@@ -68,6 +69,7 @@ class CrInfoController extends Controller
             'email' => 'required|email|unique:cr_info,email',
             'password' => 'required',
             'course_id' => 'required',
+            'semester_id' => 'required',
             'nta' => 'required'
         ]);
 
@@ -79,6 +81,7 @@ class CrInfoController extends Controller
             "email" => $request->email,
             "password" => $request->password,
             "course_id" => $request->course_id,
+            "semester_id" => $request->semester_id,
             "nta" => $request->nta,
             "branch_id" => $branchId,
         ]);
@@ -90,6 +93,7 @@ class CrInfoController extends Controller
 {
     $todayName = Carbon::now()->format('l');
     $todayDate = Carbon::today();
+
     DB::table('teacher_attendances')
         ->where('status', 'emergency')
         ->whereNotNull('date')
@@ -101,39 +105,50 @@ class CrInfoController extends Controller
     $user = Auth::guard('cr')->user();
 
     if (!$user) {
-        return redirect()->route('login')->with('error', 'Tafadhali login kwanza');
+        return redirect()->route('login')
+            ->with('error', 'Tafadhali login kwanza');
     }
 
-    
-    $holiday = Holiday::where('date', $todayDate)->first();
+    $holiday = Holiday::whereDate('date', $todayDate)->first();
 
     if ($holiday) {
         return view('lessons', [
             'lessons' => [],
+            'emergencyLessons' => [],
             'holidayMessage' => "Leo ni holiday: {$holiday->name}"
         ]);
     }
 
-
+    /*
+    |--------------------------------------------------------------------------
+    | Ratiba za leo kwa CR husika
+    |--------------------------------------------------------------------------
+    */
     $timetables = DB::table('timetables')
-        ->join('subjects','subjects.id','=','timetables.subject_id')
-        ->join('days','days.id','=','timetables.day_id')
-        ->where('timetables.branch_id', $user->branch_id)
+        ->join('subjects', 'subjects.id', '=', 'timetables.subject_id')
+        ->join('days', 'days.id', '=', 'timetables.day_id')
+
         ->where('days.day_name', $todayName)
         ->where('subjects.course_id', $user->course_id)
         ->where('subjects.nta_level', $user->nta)
-        ->where('subjects.semester_id', $user->semester_id) 
+        ->where('subjects.semester_id', $user->semester_id)
+        ->where('subjects.branch_id', $user->branch_id)
 
         ->select(
             'timetables.id as timetable_id',
-            'timetables.teacher_id',
-            'timetables.subject_id'
+            'subjects.teacher_id',
+            'subjects.id as subject_id'
         )
         ->get();
 
+    /*
+    |--------------------------------------------------------------------------
+    | Tengeneza attendance records kama hazipo
+    |--------------------------------------------------------------------------
+    */
     foreach ($timetables as $tt) {
 
-        if(!$tt->teacher_id){
+        if (empty($tt->teacher_id)) {
             continue;
         }
 
@@ -150,18 +165,26 @@ class CrInfoController extends Controller
             ]
         );
     }
-    $lessons = DB::table('teacher_attendances')
-        ->join('timetables','timetables.id','=','teacher_attendances.timetable_id')
-        ->join('subjects','subjects.id','=','timetables.subject_id')
-        ->join('timeslots','timeslots.id','=','timetables.timeslot_id')
-        ->join('days','days.id','=','timetables.day_id')
-        ->leftJoin('rooms','rooms.id','=','timetables.room_id')
-        ->leftJoin('teachers','teachers.id','=','timetables.teacher_id')
 
-        ->where('teacher_attendances.date', $todayDate)
+    /*
+    |--------------------------------------------------------------------------
+    | Vipindi vya leo
+    |--------------------------------------------------------------------------
+    */
+    $lessons = DB::table('teacher_attendances')
+        ->join('timetables', 'timetables.id', '=', 'teacher_attendances.timetable_id')
+        ->join('subjects', 'subjects.id', '=', 'timetables.subject_id')
+        ->join('timeslots', 'timeslots.id', '=', 'timetables.timeslot_id')
+        ->join('days', 'days.id', '=', 'timetables.day_id')
+        ->leftJoin('rooms', 'rooms.id', '=', 'timetables.room_id')
+        ->leftJoin('teachers', 'teachers.id', '=', 'teacher_attendances.teacher_id')
+
+        ->whereDate('teacher_attendances.date', $todayDate)
+
         ->where('subjects.course_id', $user->course_id)
         ->where('subjects.nta_level', $user->nta)
-        ->where('subjects.semester_id', $user->semester_id) 
+        ->where('subjects.semester_id', $user->semester_id)
+        ->where('subjects.branch_id', $user->branch_id)
 
         ->orderBy('timeslots.start_time')
 
@@ -175,124 +198,188 @@ class CrInfoController extends Controller
             'rooms.name as room_name',
             'teacher_attendances.status',
             'teachers.firstname',
+            'teachers.middlename',
             'teachers.lastname'
         )
         ->get();
 
+    /*
+    |--------------------------------------------------------------------------
+    | Emergency lessons
+    |--------------------------------------------------------------------------
+    */
     $emergencyLessons = DB::table('teacher_attendances')
-    ->join('subjects', 'teacher_attendances.subject_id', '=', 'subjects.id')
-    ->join('teachers', 'teacher_attendances.teacher_id', '=', 'teachers.id')
+        ->join('subjects', 'teacher_attendances.subject_id', '=', 'subjects.id')
+        ->join('teachers', 'teacher_attendances.teacher_id', '=', 'teachers.id')
+        ->join('timetables', 'teacher_attendances.timetable_id', '=', 'timetables.id')
+        ->leftJoin('rooms', 'timetables.room_id', '=', 'rooms.id')
 
-    
-    ->join('timetables', 'teacher_attendances.timetable_id', '=', 'timetables.id')
+        ->where('teacher_attendances.status', 'emergency')
 
-    
-    ->leftJoin('rooms', 'timetables.room_id', '=', 'rooms.id')
+        ->where('subjects.course_id', $user->course_id)
+        ->where('subjects.nta_level', $user->nta)
+        ->where('subjects.semester_id', $user->semester_id)
+        ->where('subjects.branch_id', $user->branch_id)
 
-    ->where('teacher_attendances.status', 'emergency')
+        ->select(
+            'teacher_attendances.*',
+            'subjects.subjectName',
+            'subjects.subjectCode',
+            'subjects.nta_level',
+            'teachers.firstname',
+            'teachers.lastname',
+            'rooms.name as room_name'
+        )
+        ->get();
 
-    ->where('subjects.course_id', $user->course_id)
-    ->where('subjects.nta_level', $user->nta)
-    ->where("subjects.branch_id",$user->branch_id)
-    ->where('subjects.semester_id', $user->semester_id)
-
-    ->select(
-        'teacher_attendances.*',
-        'subjects.subjectName',
-        'subjects.subjectCode',
-        'subjects.nta_level',
-        'teachers.firstname',
-        'teachers.lastname',
-        'rooms.name as room_name'
-    )
-    ->get();
-
-    return view("lessons", compact("lessons","emergencyLessons"));
+    return view('lessons', compact(
+        'lessons',
+        'emergencyLessons'
+    ));
 }
+//     public function store1(Request $request)
+// {
+    
+//     $attendance = TeacherAttendance::where('timetable_id', $request->timetable_id)
+//                     ->where('date', Carbon::today())
+//                     ->firstOrFail();
+
+//     $attendance->update([
+//         'status' => 'present'
+//     ]);
+
+//     return back()->with('success','Attendance marked Present');
+// }
+
     public function store1(Request $request)
 {
-    
     $attendance = TeacherAttendance::where('timetable_id', $request->timetable_id)
-                    ->where('date', Carbon::today())
-                    ->firstOrFail();
+        ->where('status', 'emergency')
+        ->latest('date')
+        ->first();
+
+    if (!$attendance) {
+
+        $attendance = TeacherAttendance::where('timetable_id', $request->timetable_id)
+            ->whereDate('date', Carbon::today())
+            ->firstOrFail();
+    }
 
     $attendance->update([
         'status' => 'present'
     ]);
 
-    return back()->with('success','Attendance marked Present');
+    return back()->with(
+        'success',
+        'Attendance marked Present successfully'
+    );
 }
-    public function studenttbl()
+    public function studentTimetable()
 {
-
     $student = Auth::guard('cr')->user();
+    
 
-    $course_id = $student->course_id;
-    $nta_level = $student->nta;
-    $semester_id = $student->semester_id;
+    $activeSemesters = DB::table('semesters')
+        ->where('status', 'Active')
+        ->orderBy('id')
+        ->get();
 
-    $timetable = DB::table('timetables')
+    if ($activeSemesters->isEmpty()) {
+        return redirect()->back()->with('error', 'No active semesters found');
+    }
 
-        ->join('subjects','subjects.id','=','timetables.subject_id')
-        ->join('courses','courses.id','=','subjects.course_id')
-        ->join('semesters','semesters.id','=','subjects.semester_id')
-        ->join('timeslots','timeslots.id','=','timetables.timeslot_id')
-        ->leftJoin('rooms','rooms.id','=','timetables.room_id')
-        ->join('days','days.id','=','timetables.day_id')
+    $entries = DB::table('timetables')
+        ->join('subjects', 'timetables.subject_id', '=', 'subjects.id')
+        ->join('courses', 'subjects.course_id', '=', 'courses.id')
+        ->join('semesters', 'subjects.semester_id', '=', 'semesters.id')
+        ->join('teachers', 'subjects.teacher_id', '=', 'teachers.id')
+        ->join('days', 'timetables.day_id', '=', 'days.id')
+        ->join('timeslots', 'timetables.timeslot_id', '=', 'timeslots.id')
+        ->join('rooms', 'timetables.room_id', '=', 'rooms.id')
 
-        // muhimu sana
-        ->leftJoin('teachers','teachers.id','=','timetables.teacher_id')
-
-        ->where('subjects.course_id',$course_id)
-        ->where("subjects.branch_id",$student->branch_id)
-        ->where('subjects.nta_level',$nta_level)
-        ->where('subjects.semester_id',$semester_id)
-
-        ->orderByRaw("
-        FIELD(days.day_name,
-        'Monday',
-        'Tuesday',
-        'Wednesday',
-        'Thursday',
-        'Friday',
-        'Saturday',
-        'Sunday')
-        ")
-
-        ->orderBy('timeslots.start_time')
+        ->where('subjects.course_id', $student->course_id)
+        ->where('subjects.nta_level', $student->nta)
+        ->where('subjects.semester_id', $student->semester_id)
 
         ->select(
-            'days.day_name as day',
+            'timetables.id as timetable_id',
+            'days.day_name',
             'timeslots.start_time',
             'timeslots.end_time',
             'subjects.subjectName',
             'subjects.subjectCode',
-            'semesters.semname as semester',
-            'courses.courseName',
             'subjects.nta_level',
-            'timetables.group_name',
-            'rooms.name as room_name',
+            'subjects.credit_hour',
+            'subjects.group_name',
+            'courses.courseName',
+            'courses.short_name',
             'teachers.firstname',
             'teachers.middlename',
-            'teachers.lastname'
+            'teachers.lastname',
+            'rooms.name as room_name',
+            'semesters.semName as semester_name'
         )
-
+        ->orderBy('semesters.id')
+        ->orderByRaw("FIELD(days.day_name,'Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday')")
+        ->orderBy('timeslots.start_time')
         ->get();
 
+    $timetableData = [];
 
-    $timeslots = $timetable
-        ->map(fn($t)=>[
-            'start'=>$t->start_time,
-            'end'=>$t->end_time
-        ])
-        ->unique()
-        ->sortBy('start')
-        ->values();
+    $semesterGroups = $entries->groupBy('semester_name');
 
+    foreach ($semesterGroups as $semester => $semesterEntries) {
 
-    $entries = $timetable->groupBy(['semester','day']);
+        $ntaGroups = $semesterEntries->groupBy('nta_level');
 
-    return view('studenttbl',compact('entries','timeslots'));
+        foreach ($ntaGroups as $ntaLevel => $ntaEntries) {
+
+            $item = $ntaEntries->first();
+
+            switch ($item->nta_level) {
+                case "NTA-4":
+                    $prefix = 'BTC';
+                    break;
+                case "NTA-5":
+                    $prefix = 'TC';
+                    break;
+                case "NTA-6":
+                    $prefix = 'OD';
+                    break;
+                case "NTA-7":
+                    $prefix = 'HD';
+                    break;
+                case "NTA-8":
+                    $prefix = 'B';
+                    break;
+                default:
+                    $prefix = '';
+            }
+
+            if (str_contains($semester, '1')) {
+                $semesterRoman = 'I';
+            } elseif (str_contains($semester, '2')) {
+                $semesterRoman = 'II';
+            } elseif (str_contains($semester, '3')) {
+                $semesterRoman = 'III';
+            } elseif (str_contains($semester, '4')) {
+                $semesterRoman = 'IV';
+            } else {
+                $semesterRoman = '';
+            }
+            
+
+            $timetableData[] = [
+                'semester' => $semester,
+                'course' => $prefix . $item->short_name . ' ' . $semesterRoman,
+                'course1' => $item->courseName,
+                'nta_level' => $ntaLevel,
+                'entries' => $ntaEntries->groupBy('day_name')
+            ];
+        }
+    }
+
+    return view('studenttbl', compact('timetableData'));
 }
     public function studentsub()
 {

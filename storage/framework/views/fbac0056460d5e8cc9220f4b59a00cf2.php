@@ -149,7 +149,11 @@
             <h1>Timetable Management System</h1>
             <p>Put your Email to reset the password</p>
         </div>
-        
+        <?php if(session('error')): ?>
+        <div style="text-align: center">
+        <span style="color: red;text-align: center"><?php echo e(session('error')); ?></span>
+         </div>
+        <?php endif; ?>
         <form action="<?php echo e(route('password.email')); ?>" method="POST">
         <?php echo csrf_field(); ?>
 

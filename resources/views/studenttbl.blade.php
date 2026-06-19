@@ -199,116 +199,127 @@ INSTITUTE OF PUBLIC AND ADMINISTRATION
 </h3>
 
 <div class="table-responsive">
+  
 
-@foreach($entries as $semester => $semesterEntries)
+<table class="table table-bordered">
 
-<h4 class="mt-4 text-center">{{ $semester }} Timetable</h4>
+    <thead>
+        <tr>
+            <th>Day</th>
+            <th>Start - End</th>
+            <th>Subject</th>
+            <th>Teacher</th>
+            <th>Room</th>
+        </tr>
+    </thead>
 
-<div id="print-{{ $semester }}">
+    <tbody>
 
-<table class="timetable-table">
+    @foreach($timetableData as $timetable)
 
-<thead>
+        @foreach($timetable['entries'] as $dayName => $entriesByDay)
 
-<tr>
+            @php
+                $totalRowsForDay = 0;
 
-<th>DAY / TIME</th>
+                foreach($entriesByDay as $entry){
 
-@foreach($timeslots as $slot)
+                    $start = \Carbon\Carbon::parse($entry->start_time);
+                    $end = \Carbon\Carbon::parse($entry->end_time);
 
-<th>
+                    $creditHour = $entry->credit_hour ?? 3;
 
-{{ date('H:i', strtotime($slot['start'])) }}
-<br>
-{{ date('H:i', strtotime($slot['end'])) }}
+                    $duration = $start->diffInHours($end);
 
-</th>
+                    $totalRowsForDay += min($duration,$creditHour);
+                }
 
-@endforeach
+                $dayPrinted = false;
+            @endphp
 
-</tr>
+            @foreach($entriesByDay as $entry)
 
-</thead>
+                @php
+                    $start = \Carbon\Carbon::parse($entry->start_time);
+                    $end = \Carbon\Carbon::parse($entry->end_time);
 
-<tbody>
+                    $creditHour = $entry->credit_hour ?? 3;
 
-@foreach($semesterEntries as $day => $dayEntries)
+                    $countHour = 0;
+                @endphp
 
-<tr>
+                @while($start < $end && $countHour < $creditHour)
 
-<td>
-{{ strtoupper($day) }}
-</td>
+                <tr>
 
-@foreach($timeslots as $slot)
+                    {{-- DAY --}}
+                    @if(!$dayPrinted)
 
-<td>
+                        <td rowspan="{{ $totalRowsForDay }}"
+                            style="writing-mode: vertical-lr; text-align:center; font-weight:bold;">
+                            {{ $dayName }}
+                        </td>
 
-@php
-$found = $dayEntries
-->where('start_time',$slot['start'])
-->where('end_time',$slot['end'])
-->first();
-@endphp
+                        @php $dayPrinted = true; @endphp
 
-@if($found)
+                    @endif
 
-<div class="subject">
-{{ $found->subjectName }}
-({{ $found->subjectCode }})
-</div>
+                    {{-- TIME --}}
+                    <td>
+                        {{ $start->format('H:i') }}
+                        -
+                        {{ $start->copy()->addHour()->format('H:i') }}
+                    </td>
 
-@if($found->group_name)
+                    {{-- SUBJECT --}}
+                    <td>
+                        <span>{{ $entry->subjectName }}</span>
+                    </td>
 
-<div class="course">
-GROUP {{ strtoupper($found->group_name) }}
-</div>
+                    {{-- TEACHER --}}
+                    <td>
+                        {{ $entry->firstname }}
+                        {{ $entry->middlename }}
+                        {{ $entry->lastname }}
+                    </td>
 
-@endif
+                    {{-- ROOM --}}
+                    <td>
+                        {{ $entry->room_name }}
+                    </td>
 
-<div class="teacher">
-{{ $found->firstname }} {{ $found->middlename }} {{ $found->lastname }}
-</div>
-<div style="font-weight: bold">
-{{ $found->room_name }}
-</div>
+                </tr>
 
-@endif
+                @php
+                    $start->addHour();
+                    $countHour++;
+                @endphp
 
-</td>
+                @endwhile
 
-@endforeach
+            @endforeach
 
-</tr>
+        @endforeach
 
-@endforeach
+    @endforeach
 
-</tbody>
+    </tbody>
 
 </table>
+{{-- <button
+    class="btn btn-primary"
+    onclick="printTimetable(this)"
 
-</div>
-
-<button 
-    onclick="printTimetable(this)" 
-    class="btn btn-primary mt-3 mb-5"
-
-    data-timetable='@json($semesterEntries)' 
-
-    data-course="{{ $semesterEntries->first()->first()->courseName ?? '' }}"
-
-    data-nta="{{ $semesterEntries->first()->first()->nta_level ?? '' }}"
-
-    data-group="{{ $semesterEntries->first()->first()->group_name ?? '' }}"
-
+    data-course="{{ $courseName }}"
+    data-nta="{{ $ntaLevel }}"
     data-semester="{{ $semester }}"
+    data-active="{{ $activeSemester }}"
 
-    data-active=""
+    data-timetable='@json($entriesByDay)'
 >
-    Print {{ $semester }}
-</button>
+    Print
+</button> --}}
 
-@endforeach
 
 </div>
 </div>

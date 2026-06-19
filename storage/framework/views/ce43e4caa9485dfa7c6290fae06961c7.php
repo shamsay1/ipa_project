@@ -182,19 +182,8 @@ unset($__errorArgs, $__bag); ?>
                 </div>
             </div>
             <div class="row">
-                <div class="col-md-6">
-                    <label for="mobile" class="form-label">FLOOR</label>
-                    <select name="building_id" class="form-select">
-                        <option value="">-- Select Type --</option>
-                        <?php $__currentLoopData = $buildings; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $bu): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                        <option value="<?php echo e($bu->id); ?>"><?php echo e($bu->building_name); ?></option>
-                            
-                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-
-
-                    </select>
-                </div>
-                <div class="col-md-6">
+                
+                <div class="col-md-12">
                     <label for="gender" class="form-label">Practical Type</label>
                     <select class="form-select" name="practical_type">
                         

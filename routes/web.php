@@ -32,7 +32,7 @@ use Illuminate\Support\Facades\Auth;
 
 Route::get("/lessons",[CrInfoController::class,"lessons"])->name("lessons");
 
-Route::get("/studenttbl",[CrInfoController::class,"studenttbl"])->name("studenttbl");
+Route::get("/studenttbl",[CrInfoController::class,"studentTimetable"])->name("studenttbl");
 
 Route::post('/teacher-attendance/store',
         [CrInfoController::class,'store1'])

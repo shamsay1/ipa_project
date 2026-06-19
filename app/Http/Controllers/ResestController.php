@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Teacher;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Hash;
@@ -10,15 +11,18 @@ class ResestController extends Controller
 {
     public function reset()
     {
-        return view('resetpassword'); // view yenye form ya kuingiza email
+        return view('resetpassword'); 
     }
 
-    // ✅ Tuma link ya reset password kwa email
     public function sendResetLink(Request $request)
 {
     $request->validate([
         'email' => 'required|email'
     ]);
+    $teacher = Teacher::where('email',$request->email)->first();
+    if(!$teacher){
+        return back()->with("error","Your Email is not allowed to reset password,please contact to the administrator");
+    }
 
     $status = Password::broker('teachers')->sendResetLink(
         $request->only('email')
@@ -29,16 +33,16 @@ class ResestController extends Controller
         : back()->withErrors(['email' => 'Email not found.']);
 }
 
-    // ✅ Onyesha form ya kubadilisha password (baada ya kubonyeza link)
+   
     public function showResetForm(Request $request, $token = null)
     {
         return view('resetpassword1', [
             'token' => $token,
-            'email' => $request->query('email') // email inakuja kama query param
+            'email' => $request->query('email') 
         ]);
     }
 
-    // ✅ Hifadhi password mpya
+    
     public function updatePassword(Request $request)
 {
     $request->validate([

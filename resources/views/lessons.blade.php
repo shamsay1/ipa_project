@@ -212,7 +212,7 @@ INSTITUTE OF PUBLIC AND ADMINISTRATION
             <td>{{ $lesson->room_name ?? 'N/A' }}</td>
 
             <td>
-                {{ $lesson->firstname ?? '' }} {{ $lesson->lastname ?? '' }}
+                {{ $lesson->firstname ?? '' }} {{ $lesson->middlename ?? '' }} {{ $lesson->lastname ?? '' }}
             </td>
 
             <td>
@@ -503,6 +503,17 @@ document.addEventListener('DOMContentLoaded', function () {
 
 });
 </script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+@if(session('success'))
+<script>
+Swal.fire({
+    icon: 'success',
+    title: 'Success!',
+    text: '{{ session('success') }}',
+    confirmButtonText: 'OK'
+});
+</script>
+@endif
 
 
 </body>

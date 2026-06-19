@@ -16,10 +16,7 @@ class Course extends Authenticatable
         "course_code",
         "short_name",
         "deptId",
-        "course_level",
-        "building_id",
-        "username",
-        "password"
+        "course_level"
     ];
 
     protected $hidden = [
@@ -27,11 +24,9 @@ class Course extends Authenticatable
         "remember_token"
     ];
 
-    /*
-    |--------------------------------------------------------------------------
-    | Relationships
-    |--------------------------------------------------------------------------
-    */
+    
+    // | Relationships
+    
 
     public function department()
     {
@@ -43,10 +38,6 @@ class Course extends Authenticatable
         return $this->hasMany(Subject::class, "course_id");
     }
 
-    public function building()
-    {
-        return $this->belongsTo(Building::class, "building_id");
-    }
 
     public function timetables()
     {

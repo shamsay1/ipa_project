@@ -1,4 +1,4 @@
-@extends("layout.app")
+
 
 <style>
     .table-container {
@@ -97,7 +97,7 @@
             transform: rotate(-90deg);
         }
 </style>
-@section("content")
+<?php $__env->startSection("content"); ?>
  <div id="content">
         <div class="table-container p-3">
             <div class="row mb-4">
@@ -110,56 +110,57 @@
             <div class="alert alert-dismissible fade show flash-message" role="alert">
   <div class="d-flex align-items-center">
     <i class="bi bi-check-circle-fill me-2"></i> <div class="flex-grow-1">
-      <h6 class="alert-heading mb-1"> Edit Teachers Information</h6>
-      <p class="mb-0" style="color: green">{{ session('success') }}</p>
+      <h6 class="alert-heading mb-1"> Edit Class Information</h6>
+      <p class="mb-0" style="color: green"><?php echo e(session('success')); ?></p>
     </div>
     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
   </div>
 </div>
 
-<form action="{{ route('course.update', $course->id)}}" method="post">
-    @csrf
-    @method('PUT')
+<form action="<?php echo e(route('room.update', $room->id)); ?>" method="post">
+            <?php echo csrf_field(); ?>
+            <?php echo method_field('PUT'); ?>
 
-    <div class="row">
-        <!-- Course Name -->
-        <div class="col-md-3 mb-3">
-            <label for="courseName" class="form-label">Course Name</label>
-            <input type="text" id="courseName" name="courseName" class="form-control" value="{{ $course->courseName }}">
-        </div>
-        <div class="col-md-3 mb-3">
-            <label for="courseName" class="form-label">Course Code</label>
-            <input type="text" id="courseName" name="course_code" class="form-control" value="{{ $course->course_code}}">
-        </div>
-        <div class="col-md-3 mb-3">
-            <label for="courseName" class="form-label">Short Name</label>
-            <input type="text" id="courseName" name="short_name" class="form-control" value="{{ $course->short_name}}">
-        </div>
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label for="firstname" class="form-label">Class Name</label>
+                    <input type="text" id="firstname" name="name" class="form-control" value="<?php echo e($room->name); ?>">
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label for="lastname" class="form-label">Capacity</label>
+                    <input type="text" id="lastname" name="capacity" class="form-control" value="<?php echo e($room->capacity); ?>">
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label for="email" class="form-label">Type</label>
+                    <select name="type" class="form-select">
+                        <option value="Normal" <?php echo e($room->type == "Normal" ? "selected" : ""); ?>>Normal</option>
+                        <option value="Lab" <?php echo e($room->type == "Lab" ? "selected" : ""); ?>>Lab</option>
+                    </select>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12">
+                    <label for="firstname" class="form-label">Practical Type</label>
+                    <select name="practical_type" class="form-select">
+                        <option value="Normal" <?php echo e($room->practical_type == "Normal" ? "selected" : ""); ?>>Normal</option>
+                        <option value="Computer" <?php echo e($room->practical_type == "Computer" ? "selected" : ""); ?>>Computer Lab</option>
 
-        <!-- Department -->
-        <div class="col-md-3 mb-3">
-            <label for="department" class="form-label">Department</label>
-            <select id="department" name="deptId" class="form-select">
-                @foreach ($dept as $de)
-                    <option value="{{ $de->id }}" {{ $course->deptId == $de->id ? 'selected' : '' }}>
-                        {{ $de->deptName }}
-                    </option>
-                @endforeach
-            </select>
-        </div>
-    </div>
 
-    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-        <button type="submit" class="btn btn-primary mt-3">
-            <i class="bi bi-save me-2"></i>Update
-        </button>
-    </div>
-</form>
+                    </select>
+                </div>
+            </div>
 
+            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                <button type="submit" class="btn btn-primary mt-3">
+                    <i class="bi bi-save me-2"></i>Update
+                </button>
+            </div>
+        </form>
             
 
             
         </div>
     </div>
 
-@endsection
+<?php $__env->stopSection(); ?>
+<?php echo $__env->make("layout.app", array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH C:\Users\PC\Documents\Timetable\resources\views/roomEdit.blade.php ENDPATH**/ ?>

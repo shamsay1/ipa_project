@@ -105,15 +105,7 @@
         
     </div>
 
-    <div class="col-md-6">
-        <!-- Search Box -->
-        <div class="input-group">
-            <input type="text" class="form-control" placeholder="Search">
-            <button class="btn btn-outline-secondary" type="button">
-                <i class="bi bi-search"></i>
-            </button>
-        </div>
-    </div>
+    
 </div>
 
 
@@ -188,6 +180,8 @@
             <tr>
                 <th>S/N</th>
                 <th>Teacher's Name</th>
+                <th>Role</th>
+                <th>Required subjects</th>
                 <th>Total Subjects</th>
                 <th>Status</th>
             </tr>
@@ -197,6 +191,8 @@
                 <tr>
                     <td>{{ $index + 1 }}</td>
                     <td style="text-align: left">{{ strtoupper($row->teacher_name) }}</td>
+                    <td><span class="badge bg-success">{{ $row->role }}</span></td>
+                    <td>{{ $row->required_subjects }}</td>
                     <td>{{ $row->subject_count }}</td>
                     <td>
                         @if($row->status == 'Overloaded')

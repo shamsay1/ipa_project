@@ -149,7 +149,11 @@
             <h1>Timetable Management System</h1>
             <p>Put your Email to reset the password</p>
         </div>
-        
+        @if(session('error'))
+        <div style="text-align: center">
+        <span style="color: red;text-align: center">{{ session('error') }}</span>
+         </div>
+        @endif
         <form action="{{ route('password.email') }}" method="POST">
         @csrf
 

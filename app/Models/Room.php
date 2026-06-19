@@ -12,14 +12,11 @@ class Room extends Model
         "type",
         "status",
         "practical_type",
-        "building_id",
         "branch_id"
     ];
      public function timetables()
     {
         return $this->hasMany(Timetable::class);
     }
-    public function building(){
-        return $this->belongsTo(Building::class);
-    }
+   
 }

@@ -199,124 +199,122 @@ INSTITUTE OF PUBLIC AND ADMINISTRATION
 </h3>
 
 <div class="table-responsive">
+  
 
-<?php $__currentLoopData = $entries; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $semester => $semesterEntries): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+<table class="table table-bordered">
 
-<h4 class="mt-4 text-center"><?php echo e($semester); ?> Timetable</h4>
+    <thead>
+        <tr>
+            <th>Day</th>
+            <th>Start - End</th>
+            <th>Subject</th>
+            <th>Teacher</th>
+            <th>Room</th>
+        </tr>
+    </thead>
 
-<div id="print-<?php echo e($semester); ?>">
+    <tbody>
 
-<table class="timetable-table">
+    <?php $__currentLoopData = $timetableData; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $timetable): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
 
-<thead>
+        <?php $__currentLoopData = $timetable['entries']; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $dayName => $entriesByDay): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
 
-<tr>
+            <?php
+                $totalRowsForDay = 0;
 
-<th>DAY / TIME</th>
+                foreach($entriesByDay as $entry){
 
-<?php $__currentLoopData = $timeslots; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $slot): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                    $start = \Carbon\Carbon::parse($entry->start_time);
+                    $end = \Carbon\Carbon::parse($entry->end_time);
 
-<th>
+                    $creditHour = $entry->credit_hour ?? 3;
 
-<?php echo e(date('H:i', strtotime($slot['start']))); ?>
+                    $duration = $start->diffInHours($end);
 
-<br>
-<?php echo e(date('H:i', strtotime($slot['end']))); ?>
+                    $totalRowsForDay += min($duration,$creditHour);
+                }
 
+                $dayPrinted = false;
+            ?>
 
-</th>
+            <?php $__currentLoopData = $entriesByDay; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $entry): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
 
-<?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                <?php
+                    $start = \Carbon\Carbon::parse($entry->start_time);
+                    $end = \Carbon\Carbon::parse($entry->end_time);
 
-</tr>
+                    $creditHour = $entry->credit_hour ?? 3;
 
-</thead>
+                    $countHour = 0;
+                ?>
 
-<tbody>
+                <?php while($start < $end && $countHour < $creditHour): ?>
 
-<?php $__currentLoopData = $semesterEntries; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $day => $dayEntries): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                <tr>
 
-<tr>
+                    
+                    <?php if(!$dayPrinted): ?>
 
-<td>
-<?php echo e(strtoupper($day)); ?>
+                        <td rowspan="<?php echo e($totalRowsForDay); ?>"
+                            style="writing-mode: vertical-lr; text-align:center; font-weight:bold;">
+                            <?php echo e($dayName); ?>
 
-</td>
+                        </td>
 
-<?php $__currentLoopData = $timeslots; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $slot): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                        <?php $dayPrinted = true; ?>
 
-<td>
+                    <?php endif; ?>
 
-<?php
-$found = $dayEntries
-->where('start_time',$slot['start'])
-->where('end_time',$slot['end'])
-->first();
-?>
+                    
+                    <td>
+                        <?php echo e($start->format('H:i')); ?>
 
-<?php if($found): ?>
+                        -
+                        <?php echo e($start->copy()->addHour()->format('H:i')); ?>
 
-<div class="subject">
-<?php echo e($found->subjectName); ?>
+                    </td>
 
-(<?php echo e($found->subjectCode); ?>)
-</div>
+                    
+                    <td>
+                        <span><?php echo e($entry->subjectName); ?></span>
+                    </td>
 
-<?php if($found->group_name): ?>
+                    
+                    <td>
+                        <?php echo e($entry->firstname); ?>
 
-<div class="course">
-GROUP <?php echo e(strtoupper($found->group_name)); ?>
+                        <?php echo e($entry->middlename); ?>
 
-</div>
+                        <?php echo e($entry->lastname); ?>
 
-<?php endif; ?>
+                    </td>
 
-<div class="teacher">
-<?php echo e($found->firstname); ?> <?php echo e($found->middlename); ?> <?php echo e($found->lastname); ?>
+                    
+                    <td>
+                        <?php echo e($entry->room_name); ?>
 
-</div>
-<div style="font-weight: bold">
-<?php echo e($found->room_name); ?>
+                    </td>
 
-</div>
+                </tr>
 
-<?php endif; ?>
+                <?php
+                    $start->addHour();
+                    $countHour++;
+                ?>
 
-</td>
+                <?php endwhile; ?>
 
-<?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
 
-</tr>
+        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
 
-<?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
 
-</tbody>
+    </tbody>
 
 </table>
 
-</div>
 
-<button 
-    onclick="printTimetable(this)" 
-    class="btn btn-primary mt-3 mb-5"
-
-    data-timetable='<?php echo json_encode($semesterEntries, 15, 512) ?>' 
-
-    data-course="<?php echo e($semesterEntries->first()->first()->courseName ?? ''); ?>"
-
-    data-nta="<?php echo e($semesterEntries->first()->first()->nta_level ?? ''); ?>"
-
-    data-group="<?php echo e($semesterEntries->first()->first()->group_name ?? ''); ?>"
-
-    data-semester="<?php echo e($semester); ?>"
-
-    data-active=""
->
-    Print <?php echo e($semester); ?>
-
-</button>
-
-<?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
 
 </div>
 </div>

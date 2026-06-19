@@ -1,5 +1,3 @@
-
-
 <style>
     .table-container {
         background-color: #fff;
@@ -359,7 +357,7 @@ function printTeacherTimetable(button) {
     printWindow.document.write(`
     <html>
     <head>
-        <title>Teacher ${teacherName} Timetable</title>
+        <title>Teacher ${teacherName} last updated Timetable</title>
         <style>
             @page { margin:0 }
             body{ margin:40px; font-family:'Times New Roman'; }
@@ -372,7 +370,17 @@ function printTeacherTimetable(button) {
     </head>
     <body onload="window.print();window.close();">
         <h2>THE INSTITUTE OF PUBLIC AND ADMINISTRATION</h2>
+        <span style="font-style: italic">Generated on
+                            ${
+                                new Date().toLocaleDateString('en-GB', {
+                                    day: '2-digit',
+                                    month: 'long',
+                                    year: 'numeric'
+                                })
+                            }
+                        </span>
         <h4>TIMETABLE FOR TEACHER: ${teacherName.toUpperCase()}</h4>
+        
 
         <table>
             <thead>

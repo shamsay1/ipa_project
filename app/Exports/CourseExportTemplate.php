@@ -26,9 +26,6 @@ class CourseExportTemplate implements FromCollection,WithHeadings
             "short_name",
             "dept_code",
             "course_level",
-            "building_code",
-            "username",
-            "password"
         ];
     }
     public function registerEvents(): array

@@ -122,8 +122,8 @@ foreach ($data->groupBy('teacher_id') as $teacherId => $lessons) {
     $report[] = [
         'teacher_id'          => $teacherId,
         'teacher'             => $lessons->first()->teacher_name,
-        'total_teaching_days' => $totalTeachingDays, // 🔥 HII NDIYO MPYA
-        'days_list'           => $daysList,          // optional
+        'total_teaching_days' => $totalTeachingDays, 
+        'days_list'           => $daysList,       
         'max_per_day'         => $maxPerDay . " ($dayName)",
         'evening_lessons'     => $evening,
         'full_day'            => $fullDay,
@@ -135,24 +135,45 @@ foreach ($data->groupBy('teacher_id') as $teacherId => $lessons) {
 }
 
 
-   public function loadReport(Request $request)
+  public function loadReport(Request $request)
 {
     $departments = Department::all();
-    $semesters = DB::table('semesters')->orderBy('id', 'asc')->get(); 
+    $semesters = DB::table('semesters')->orderBy('id', 'asc')->get();
 
     $query = DB::table('teachers')
         ->leftJoin('subjects', 'subjects.teacher_id', '=', 'teachers.id')
         ->leftJoin('departments', 'teachers.deptId', '=', 'departments.id')
         ->leftJoin('semesters', 'subjects.semester_id', '=', 'semesters.id')
-        ->where('user_level', 'teacher')
         ->select(
             'teachers.id',
-            DB::raw("CONCAT(teachers.firstname, ' ', teachers.lastname) as teacher_name"),
+            'teachers.role',
+            DB::raw("CONCAT(
+                teachers.firstname,' ',
+                teachers.middlename,' ',
+                teachers.lastname
+            ) as teacher_name"),
             'departments.deptName as department_name',
-            DB::raw('COUNT(subjects.id) as subject_count')
+
+            DB::raw("
+                COUNT(
+                    DISTINCT
+                    CASE
+                        WHEN subjects.group_name IS NOT NULL
+                        THEN CONCAT('GROUP_', subjects.group_name)
+                        ELSE CONCAT('SUBJECT_', subjects.id)
+                    END
+                ) as subject_count
+            ")
         )
-        ->groupBy('teachers.id', 'teachers.firstname', 'teachers.lastname', 'departments.deptName')
-        ->orderBy("teachers.firstname");
+        ->groupBy(
+            'teachers.id',
+            'teachers.role',
+            'teachers.firstname',
+            'teachers.middlename',
+            'teachers.lastname',
+            'departments.deptName'
+        )
+        ->orderBy('teachers.firstname');
 
     if ($request->filled('department_id')) {
         $query->where('teachers.deptId', $request->department_id);
@@ -163,17 +184,41 @@ foreach ($data->groupBy('teacher_id') as $teacherId => $lessons) {
     }
 
     $report = $query->get();
-    foreach($report as $item) {
-        if ($item->subject_count > 6) {
+
+    foreach ($report as $item) {
+
+        // Required teaching load according to role
+        if ($item->role == 'teacher') {
+            $requiredSubjects = 6;
+        } elseif ($item->role == 'Supervisor') {
+            $requiredSubjects = 3;
+        } elseif ($item->role == 'head_of_department') {
+            $requiredSubjects = 2;
+        } elseif ($item->role == 'dean') {
+            $requiredSubjects = 1;
+        } elseif ($item->role == 'principal') {
+            $requiredSubjects = 0;
+        } else {
+            $requiredSubjects = 6; 
+        }
+
+        $item->required_subjects = $requiredSubjects;
+
+        if ($item->subject_count > $requiredSubjects) {
             $item->status = 'Overloaded';
-        } elseif ($item->subject_count == 6) {
+        } elseif ($item->subject_count == $requiredSubjects) {
             $item->status = 'Balanced';
         } else {
             $item->status = 'Underloaded';
         }
-    };
+    }
 
-    return view('teachersub', compact('departments', 'semesters', 'report'));
+    return view('teachersub', compact(
+        'departments',
+        'semesters',
+        'report',
+        'requiredSubjects'
+    ));
 }
 
     public function index1(Request $request)
@@ -247,6 +292,7 @@ foreach ($data->groupBy('teacher_id') as $teacherId => $lessons) {
         'timetables.day_id',
         'timetables.timeslot_id',
         'teachers.firstname',
+        'teachers.middlename',
         'teachers.lastname',
         'subjects.subjectName',
         'courses.short_name'
@@ -259,7 +305,7 @@ foreach ($data->groupBy('teacher_id') as $teacherId => $lessons) {
 
 foreach ($timetable as $item) {
 
-    $teacherName = trim(($item->firstname ?? '') . ' ' . ($item->lastname ?? ''));
+    $teacherName = trim(($item->firstname ?? '') . ' ' . ($item->middlename ?? '')). ' ' . ($item->lastname ?? '');
 
     $usageMap[$item->day_id][$item->timeslot_id] = [
         'teacher' => $teacherName ?: 'No Teacher',

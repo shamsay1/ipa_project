@@ -123,17 +123,21 @@
 
     <div class="row">
         <!-- Course Name -->
-        <div class="col-md-4 mb-3">
+        <div class="col-md-3 mb-3">
             <label for="courseName" class="form-label">Course Name</label>
             <input type="text" id="courseName" name="courseName" class="form-control" value="<?php echo e($course->courseName); ?>">
         </div>
-        <div class="col-md-4 mb-3">
+        <div class="col-md-3 mb-3">
             <label for="courseName" class="form-label">Course Code</label>
             <input type="text" id="courseName" name="course_code" class="form-control" value="<?php echo e($course->course_code); ?>">
         </div>
+        <div class="col-md-3 mb-3">
+            <label for="courseName" class="form-label">Short Name</label>
+            <input type="text" id="courseName" name="short_name" class="form-control" value="<?php echo e($course->short_name); ?>">
+        </div>
 
         <!-- Department -->
-        <div class="col-md-4 mb-3">
+        <div class="col-md-3 mb-3">
             <label for="department" class="form-label">Department</label>
             <select id="department" name="deptId" class="form-select">
                 <?php $__currentLoopData = $dept; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $de): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>

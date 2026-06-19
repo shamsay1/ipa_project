@@ -213,12 +213,7 @@
   </div>
 </div>
 
-                <div class="col-md-5">
-                    <div class="input-group">
-                        <input type="text" name="search" id="search" class="form-control" placeholder="Search teachers..." autocomplete="off">
-                        <span class="input-group-text"><i class="bi bi-search"></i></span>
-                    </div>
-                </div>
+                
             </div>
         </div>
         <div class="container">
