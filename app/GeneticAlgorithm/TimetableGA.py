@@ -1,7 +1,9 @@
 import random
 import time
 from copy import deepcopy
+from collections import defaultdict
 from TimetableChromosome import TimetableChromosome
+
 
 class TimetableGA:
 
@@ -27,6 +29,14 @@ class TimetableGA:
             chrom.calculate_fitness(timetable)
             population.append(chrom)
 
+        # 🔵 Canonical, fixed order of every scheduling "session".
+        # Every chromosome labels its genes with these same ids, so a
+        # crossover cut point always aligns the same logical lecture
+        # across both parents. A session is always swapped as one
+        # indivisible unit so shared-group subjects (same group_name)
+        # can never be split between different days/rooms by crossover.
+        session_ids = timetable.session_id_sequence()
+
         for generation in range(self.max_generations):
 
             if time.time() - start_time > self.time_limit:
@@ -35,15 +45,40 @@ class TimetableGA:
             population.sort(key=lambda x: x.fitness, reverse=True)
             new_population = population[:self.elitism_count]
 
+            pool = population[:10] if len(population) >= 10 else population
+
             while len(new_population) < self.population_size:
 
-                p1 = random.choice(population[:10])
-                p2 = random.choice(population[:10])
-
-                cp = random.randint(1, len(p1.genes) - 1)
+                p1 = random.choice(pool)
+                p2 = random.choice(pool)
 
                 child = TimetableChromosome(timetable)
-                child.genes = deepcopy(p1.genes[:cp] + p2.genes[cp:])
+
+                if len(session_ids) > 1 and random.random() < self.crossover_rate:
+                    # Session-aware crossover: take sessions 1…cp from p1,
+                    # sessions cp+1…end from p2. Cutting on session
+                    # boundaries guarantees every multi-slot block and every
+                    # member of a shared group always come from the same
+                    # parent — the child is internally consistent from birth.
+                    cp = random.randint(1, len(session_ids) - 1)
+                    left_ids  = set(session_ids[:cp])
+                    right_ids = set(session_ids[cp:])
+
+                    child.genes = deepcopy(
+                        [g for g in p1.genes if g.get("session_id") in left_ids]
+                        + [g for g in p2.genes if g.get("session_id") in right_ids]
+                    )
+                else:
+                    child.genes = deepcopy(
+                        p1.genes if p1.fitness >= p2.fitness else p2.genes
+                    )
+
+                # carry over expected session counts so fitness can
+                # validate per-subject targets correctly
+                child.expected_blocks = getattr(
+                    p1, "expected_blocks", getattr(p2, "expected_blocks", {})
+                )
+
                 self.mutate(child, timetable)
                 child.calculate_fitness(timetable)
 
@@ -51,12 +86,107 @@ class TimetableGA:
 
             population = new_population
 
+        population.sort(key=lambda x: x.fitness, reverse=True)
         return population[0]
 
     def mutate(self, chromosome, timetable):
 
+        # 🔵 Mutate a whole "session" (one block) at a time instead of
+        # one timeslot-gene at a time.  This keeps:
+        #   - a 2-hour double block contiguous (both timeslots move together)
+        #   - a shared group (subjects with the same group_name) always on
+        #     the same day/room/timeslots because every gene in the group
+        #     carries the same session_id and is moved as one atomic unit.
+
+        sessions = defaultdict(list)
         for gene in chromosome.genes:
-            if random.random() < self.mutation_rate:
-                gene["day_id"] = random.randrange(len(timetable.days))
-                gene["timeslot_id"] = random.randrange(len(timetable.timeslots))
-                gene["room_id"] = random.randrange(len(timetable.rooms))
+            sessions[gene.get("session_id")].append(gene)
+
+        subject_lookup = timetable.subject_map
+        helper = TimetableChromosome(timetable)
+
+        for session_id, genes in sessions.items():
+
+            if session_id is None or random.random() >= self.mutation_rate:
+                continue
+
+            genes_by_subject = defaultdict(list)
+            for g in genes:
+                genes_by_subject[g["subject_id"]].append(g)
+
+            first_subject_id = genes[0]["subject_id"]
+            block = len({g["timeslot_id"] for g in genes_by_subject[first_subject_id]})
+            if block == 0:
+                continue
+
+            subj_list = [
+                subject_lookup[sid]
+                for sid in genes_by_subject
+                if sid in subject_lookup
+            ]
+            if not subj_list:
+                continue
+
+            levels = set()
+            for s in subj_list:
+                course = timetable.course_map.get(s["course_id"], {})
+                levels.add(course.get("course_level", "").lower())
+
+            nta = subj_list[0].get("nta_level")
+            is_nta4 = timetable.is_nta4(nta)
+
+            # Diploma and nta-4 stay off weekends; degree can use weekends
+            # (8:00–16:00 per FIX 3).
+            weekend_blocked = is_nta4 or ("diploma" in levels)
+
+            candidate_days = list(range(len(timetable.days)))
+            random.shuffle(candidate_days)
+
+            new_day = None
+            new_slots = None
+
+            for day_id in candidate_days:
+                day_name = timetable.days[day_id]["day_name"].lower()
+
+                if weekend_blocked and day_name in ("saturday", "sunday"):
+                    continue
+
+                valid_slots = []
+                for idx, hour in enumerate(timetable.timeslot_start_hours):
+                    if day_name == "friday" and hour == 12:
+                        continue
+                    ok = True
+                    for level in levels:
+                        if not helper.allowed_time(level, nta, day_name, hour):
+                            ok = False; break
+                    if ok:
+                        valid_slots.append(idx)
+
+                valid_slots.sort()
+
+                for i in range(len(valid_slots)):
+                    if i + block > len(valid_slots):
+                        break
+                    slots = valid_slots[i:i + block]
+                    if slots[-1] != slots[0] + (block - 1):
+                        continue
+                    new_day = day_id
+                    new_slots = slots
+                    break
+
+                if new_slots:
+                    break
+
+            if not new_slots:
+                # no valid time window found — leave this session as-is
+                continue
+
+            new_room_idx = random.randrange(len(timetable.rooms))
+            ordered_new_slots = sorted(new_slots)
+
+            for sid, glist in genes_by_subject.items():
+                glist.sort(key=lambda g: g["timeslot_id"])
+                for g, new_ts in zip(glist, ordered_new_slots):
+                    g["day_id"] = new_day
+                    g["timeslot_id"] = new_ts
+                    g["room_id"] = new_room_idx

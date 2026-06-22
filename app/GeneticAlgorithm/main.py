@@ -5,6 +5,7 @@ import traceback
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
+
 def main():
     try:
         if len(sys.argv) < 2:
@@ -55,6 +56,7 @@ def main():
     except Exception as e:
         print(json.dumps({"error": str(e), "traceback": traceback.format_exc()}))
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()
