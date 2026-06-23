@@ -26,16 +26,39 @@ use Maatwebsite\Excel\Validators\ValidationException;
 
 class CrInfoController extends Controller
 {
-    public function index(){
+   public function index(Request $request)
+{
+    $courses = Course::all();
+    $semesters = Semester::all();
 
-        $courses = Course::all();
-        $semesters = Semester::all();
-        $teacher = Auth::user();
-        $crs = CrInfo::with(['course','semester'])->where("branch_id",$teacher->branch_id)->get();
+    $teacher = Auth::user();
 
-        return view("regcr",compact("courses","semesters","crs"));
+    $search = $request->search;
 
-        }
+    $crs = CrInfo::with(['course', 'semester'])
+        ->where('branch_id', $teacher->branch_id)
+        ->when($search, function ($query) use ($search) {
+            $query->where(function ($q) use ($search) {
+
+                $q->where('firstname', 'like', "%{$search}%")
+                  ->orWhere('middlename', 'like', "%{$search}%")
+                  ->orWhere('lastname', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%")
+                  ->orWhere('mobile', 'like', "%{$search}%")
+                  ->orWhere('nta', 'like', "%{$search}%")
+                  ->orWhereHas('course', function ($course) use ($search) {
+                      $course->where('courseName', 'like', "%{$search}%");
+                  });
+            });
+        })
+        ->paginate(10);
+
+    return view('regcr', compact(
+        'courses',
+        'semesters',
+        'crs'
+    ));
+}
 
     public function update(Request $request,$id)
         {
@@ -89,6 +112,16 @@ class CrInfoController extends Controller
         return redirect()->route('cr_info.index')
                          ->with('success', 'CR Registered Successfully');
     }
+
+    public function destroy($id)
+{
+    $student = CrInfo::findOrFail($id);
+
+    $student->delete();
+
+    return redirect()->back()
+        ->with('success', 'Student deleted successfully.');
+}
     public function lessons()
 {
     $todayName = Carbon::now()->format('l');

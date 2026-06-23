@@ -350,7 +350,7 @@ function printTeacherTimetable(button) {
     printWindow.document.write(`
     <html>
     <head>
-        <title>Teacher ${teacherName} last updated Timetable</title>
+        <title>Teacher ${teacherName} Timetable</title>
         <style>
             @page { margin:0 }
             body{ margin:40px; font-family:'Times New Roman'; }
@@ -365,12 +365,8 @@ function printTeacherTimetable(button) {
         <h2>THE INSTITUTE OF PUBLIC AND ADMINISTRATION</h2>
         <span style="font-style: italic">Generated on
                             ${
-                                new Date().toLocaleDateString('en-GB', {
-                                    day: '2-digit',
-                                    month: 'long',
-                                    year: 'numeric'
-                                })
-                            }
+    "{{ \Carbon\Carbon::parse($date->created_at)->format('d F, Y') }}"
+}
                         </span>
         <h4>TIMETABLE FOR TEACHER: ${teacherName.toUpperCase()}</h4>
         
@@ -407,7 +403,7 @@ function printTeacherTimetable(button) {
 
                                     const groupSubjects = groupCourses[entry.group_name] || [];
 
-                                    // 🔥 SHOW GROUP NAME + COURSES
+                                  
                                     html += '<strong>' + entry.group_name.toUpperCase() + '</strong><br>';
                                     html += groupSubjects.join(' + ') + '<br>';
                                     html += 'ROOM: ' + entry.room_name;

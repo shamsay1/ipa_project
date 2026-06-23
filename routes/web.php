@@ -106,6 +106,7 @@ Route::middleware(['auth:teacher'])->group(function () {
     Route::resource('cr_info', CrInfoController::class);
     Route::get("/supervision",[TeacherController::class,"supervision"])->name("supervision");
     Route::get("/report7",[TeacherController::class,"report7"])->name("report7");
+    Route::get('/subject-attendance-details', [TeacherController::class, 'getAttendanceDetails'])->name('subject.attendance.details');
     Route::get("/adminprofile",[TeacherController::class,"adprofile"])->name("sup");
     Route::put('/cr-update/{id}',[CrInfoController::class,'update'])->name('cr.update');
     Route::get("/teachertbl1",[TeacherController::class,"teacherTimetable1"])->name("teachertbl1");

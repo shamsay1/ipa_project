@@ -139,41 +139,67 @@ class TimetableGA:
             # (8:00–16:00 per FIX 3).
             weekend_blocked = is_nta4 or ("diploma" in levels)
 
+            # 🔵 FIX 5 — teacher weekly-day cap during mutation: figure
+            # out which days each involved teacher is already using
+            # (from every OTHER session in this chromosome), so we
+            # don't push a teacher past MAX_TEACHER_DAYS distinct days.
+            session_gene_ids = {id(g) for g in genes}
+            current_teacher_days = defaultdict(set)
+            for g in chromosome.genes:
+                if id(g) in session_gene_ids:
+                    continue
+                current_teacher_days[g["teacher_id"]].add(g["day_id"])
+
+            teacher_ids = {s["teacher_id"] for s in subj_list}
+
+            def teacher_day_ok(day_id):
+                for tid in teacher_ids:
+                    tdays = current_teacher_days.get(tid, set())
+                    if day_id not in tdays and len(tdays) >= TimetableChromosome.MAX_TEACHER_DAYS:
+                        return False
+                return True
+
             candidate_days = list(range(len(timetable.days)))
             random.shuffle(candidate_days)
 
             new_day = None
             new_slots = None
 
-            for day_id in candidate_days:
-                day_name = timetable.days[day_id]["day_name"].lower()
-
-                if weekend_blocked and day_name in ("saturday", "sunday"):
-                    continue
-
-                valid_slots = []
-                for idx, hour in enumerate(timetable.timeslot_start_hours):
-                    if day_name == "friday" and hour == 12:
+            for enforce_teacher_cap in (True, False):
+                for day_id in candidate_days:
+                    if enforce_teacher_cap and not teacher_day_ok(day_id):
                         continue
-                    ok = True
-                    for level in levels:
-                        if not helper.allowed_time(level, nta, day_name, hour):
-                            ok = False; break
-                    if ok:
-                        valid_slots.append(idx)
 
-                valid_slots.sort()
+                    day_name = timetable.days[day_id]["day_name"].lower()
 
-                for i in range(len(valid_slots)):
-                    if i + block > len(valid_slots):
+                    if weekend_blocked and day_name in ("saturday", "sunday"):
+                        continue
+
+                    valid_slots = []
+                    for idx, hour in enumerate(timetable.timeslot_start_hours):
+                        if day_name == "friday" and hour == 12:
+                            continue
+                        ok = True
+                        for level in levels:
+                            if not helper.allowed_time(level, nta, day_name, hour):
+                                ok = False; break
+                        if ok:
+                            valid_slots.append(idx)
+
+                    valid_slots.sort()
+
+                    for i in range(len(valid_slots)):
+                        if i + block > len(valid_slots):
+                            break
+                        slots = valid_slots[i:i + block]
+                        if slots[-1] != slots[0] + (block - 1):
+                            continue
+                        new_day = day_id
+                        new_slots = slots
                         break
-                    slots = valid_slots[i:i + block]
-                    if slots[-1] != slots[0] + (block - 1):
-                        continue
-                    new_day = day_id
-                    new_slots = slots
-                    break
 
+                    if new_slots:
+                        break
                 if new_slots:
                     break
 
@@ -181,7 +207,23 @@ class TimetableGA:
                 # no valid time window found — leave this session as-is
                 continue
 
-            new_room_idx = random.randrange(len(timetable.rooms))
+            # 🔵 FIX 4 — pick the new room using the same student-count
+            # / capacity-aware candidate list used during generation,
+            # instead of a fully random room. Falls back to a fully
+            # random room only if no candidate is available at all.
+            candidate_rooms = helper._group_candidate_rooms(subj_list)
+            if candidate_rooms:
+                chosen_room = random.choice(candidate_rooms)
+                new_room_idx = next(
+                    (ri for ri, r in enumerate(timetable.rooms)
+                     if r["id"] == chosen_room["id"]),
+                    None
+                )
+                if new_room_idx is None:
+                    new_room_idx = random.randrange(len(timetable.rooms))
+            else:
+                new_room_idx = random.randrange(len(timetable.rooms))
+
             ordered_new_slots = sorted(new_slots)
 
             for sid, glist in genes_by_subject.items():

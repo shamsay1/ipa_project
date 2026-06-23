@@ -8,5 +8,6 @@ class SystemTimetable extends Model
 {
     protected $fillable = [
         "status",
+        "created_at"
     ];
 }

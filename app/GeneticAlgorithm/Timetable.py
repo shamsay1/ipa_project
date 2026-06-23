@@ -27,8 +27,53 @@ class Timetable:
             key = (r["course_id"], r["nta_level"])
             self.course_room_map[key].append(r["room_id"])
 
+        # 🔵 FIX 4 — STUDENT-COUNT MAP (per course_id + nta_level)
+        # Built once here so room-capacity decisions (in
+        # TimetableChromosome) can look up "how many students attend
+        # this course/nta" without re-scanning course_rooms every time.
+        # If a course/nta has more than one course_rooms row (e.g. it
+        # was assigned more than one permanent room), the totals are
+        # summed — this mirrors how the room list itself is built
+        # above (course_room_map appends every matching room).
+        self.student_count_map = defaultdict(int)
+        for r in self.course_rooms:
+            key = (r["course_id"], self._norm_nta(r.get("nta_level")))
+            self.student_count_map[key] += (r.get("total_students") or 0)
+
+    @staticmethod
+    def _norm_nta(nta_level):
+        return str(nta_level or "").strip().lower()
+
     def get_permanent_rooms(self, course_id, nta_level):
         return self.course_room_map.get((course_id, nta_level), [])
+
+    # ---------------------------------------------------------------
+    # 🔵 FIX 4 — STUDENT COUNT LOOKUPS
+    #
+    # get_student_count: total students for ONE course + nta_level,
+    # taken from course_rooms.total_students.
+    #
+    # get_group_student_count: for a scheduling group (a list of
+    # subjects — either a single subject, or several subjects that
+    # share the same group_name/nta_level and therefore attend one
+    # joint lecture together), this sums the student counts of every
+    # DISTINCT (course_id, nta_level) pair present in that group.
+    #
+    # Example: a shared lecture attended by NTA-5 of course A (40
+    # students) and NTA-5 of course B (30 students) returns 70, even
+    # though it is stored as two separate subject rows.
+    # ---------------------------------------------------------------
+    def get_student_count(self, course_id, nta_level):
+        return self.student_count_map.get((course_id, self._norm_nta(nta_level)), 0)
+
+    def get_group_student_count(self, subj_list):
+        pairs = set()
+        for s in subj_list:
+            pairs.add((s["course_id"], self._norm_nta(s.get("nta_level"))))
+        total = 0
+        for course_id, nta_level in pairs:
+            total += self.student_count_map.get((course_id, nta_level), 0)
+        return total
 
     # ---------------------------------------------------------------
     # Helper: is this subject's nta_level the special "nta-4" cohort?

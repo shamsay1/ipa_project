@@ -2415,14 +2415,16 @@ public function syncGroupSubjects()
 }
 
 
-            public function enable()
-        {
-            $timetable = SystemTimetable::first();
-            $timetable->status = 'created';
-            $timetable->save();
+        public function enable()
+{
+    $timetable = SystemTimetable::first();
 
-            return back()->with('success', 'Timetable enabled');
-        }
+    $timetable->status = 'created';
+    $timetable->created_at = now();
+    $timetable->save();
+
+    return back()->with('success', 'Timetable enabled');
+}
 
         public function disable()
         {

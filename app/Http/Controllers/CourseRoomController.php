@@ -28,6 +28,7 @@ class CourseRoomController extends Controller
         'group_name' => 'nullable|string',
         'total_students' => 'nullable|string',
         'room_id'    => 'required|exists:rooms,id',
+        
     ]);
 
     
@@ -62,6 +63,7 @@ class CourseRoomController extends Controller
         'group_name' => $request->group_name,
         'total_students' =>$request->total_students,
         'room_id'    => $request->room_id,
+        'branch_id' => Auth::user()->branch_id
     ]);
 
     return redirect()->back()->with('success', 'Course room inserted successfully');

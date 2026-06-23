@@ -234,7 +234,6 @@
   <div class="d-flex align-items-center">
     <i class="bi bi-check-circle-fill me-2"></i> <div class="flex-grow-1">
       <h6 class="alert-heading mb-1">Class represantative Information</h6>
-      <p class="mb-0" style="color: green">{{ session('success') }}</p>
     </div>
     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
   </div>
@@ -242,6 +241,23 @@
 
         <!-- Table Section -->
         <div class="table-responsive">
+            <form method="GET" action="{{ url()->current() }}" class="mb-3 mt-2 p-2">
+    <div class="input-group">
+        <input type="text"
+               name="search"
+               class="form-control"
+               placeholder="Search name, email, mobile, course or NTA..."
+               value="{{ request('search') }}">
+
+        <button type="submit" class="btn btn-primary">
+            <i class="bi bi-search"></i> Search
+        </button>
+
+        <a href="{{ url()->current() }}" class="btn btn-secondary">
+            Reset
+        </a>
+    </div>
+</form>
    <table class="table table-bordered">
         <thead class="table-dark">
             <tr>
@@ -270,24 +286,36 @@
                     <td>{{ $cr->nta }}</td>
                     <td>{{ $cr->semester->semName ?? 'N/A' }}</td>
                     <td>
-                        <button 
-class="btn btn-sm btn-outline-primary editBtn"
+    <!-- Edit Button -->
+    <button
+        class="btn btn-sm btn-outline-primary editBtn"
+        data-id="{{ $cr->id }}"
+        data-firstname="{{ $cr->firstname }}"
+        data-middlename="{{ $cr->middlename }}"
+        data-lastname="{{ $cr->lastname }}"
+        data-mobile="{{ $cr->mobile }}"
+        data-email="{{ $cr->email }}"
+        data-course="{{ $cr->course_id }}"
+        data-nta="{{ $cr->nta }}"
+        data-semester="{{ $cr->semester_id }}"
+        title="Edit">
+        <i class="bi bi-pencil-square"></i>
+    </button>
 
-data-id="{{ $cr->id }}"
-data-firstname="{{ $cr->firstname }}"
-data-middlename="{{ $cr->middlename }}"
-data-lastname="{{ $cr->lastname }}"
-data-mobile="{{ $cr->mobile }}"
-data-email="{{ $cr->email }}"
-data-course="{{ $cr->course_id }}"
-data-nta="{{ $cr->nta }}"
-data-semester="{{ $cr->semester_id }}"
+    <!-- Delete Button -->
+    <form action="{{ route('cr_info.destroy', $cr->id) }}"
+          method="POST"
+          class="d-inline"
+          onsubmit="return confirm('Are you sure you want to delete this student?')">
+        @csrf
+        @method('DELETE')
 
-title="Edit">
-
-<i class="bi bi-pencil-square"></i>
-
-</button>
+        <button type="submit"
+                class="btn btn-sm btn-outline-danger"
+                title="Delete">
+            <i class="bi bi-trash"></i>
+        </button>
+    </form>
 </td>
                 </tr>
             @empty
@@ -298,9 +326,9 @@ title="Edit">
         </tbody>
     </table>
 
-    {{-- <div class="mt-3" id="paginationLinks">
-        {{ $teachers->links() }}
-    </div> --}}
+    <div class="mt-3" id="paginationLinks">
+        {{ $crs->links() }}
+    </div>
 </div>
 
     </div>
@@ -458,6 +486,18 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 </script>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+@if(session('success'))
+<script>
+Swal.fire({
+    icon: 'success',
+    title: 'Success!',
+    text: '{{ session('success') }}',
+    confirmButtonText: 'OK'
+});
+</script>
+@endif
 
 
 @endsection

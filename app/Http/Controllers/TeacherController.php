@@ -369,6 +369,7 @@ public function TeacherImport(Request $request)
                 }
             })
             ->select(
+                'subjects.id as subject_id', // <--- HAPA NDIPO MLANGO WA TATIZO LAKO ULIPOPOLEWESHWA
                 'subjects.subjectName',
                 'subjects.subjectCode',
                 'subjects.nta_level',
@@ -916,11 +917,7 @@ public function teacherTimetable1()
 {
     $teacher = Auth::user();
 
-    /*
-    =========================
-    TIMETABLE ENTRIES
-    =========================
-    */
+    $date = SystemTimetable::first();
     $today = Carbon::today();
      $status = Semester::where("status","Active")->first();
     $timetableEntries = DB::table('timetables')
@@ -1063,7 +1060,7 @@ public function teacherTimetable1()
         'entries' => $timetableEntries->groupBy('day_name')
     ];
 
-    return view('teachertbl1', compact('timetable','groupCourses','status','today','teacher'));
+    return view('teachertbl1', compact('timetable','groupCourses','status','today','teacher','date'));
 }
     public function teachersubjects1(){
         $teacher = Auth::user();
@@ -1103,6 +1100,51 @@ public function teacherTimetable1()
     return back()->with('success', 'Lesson marked as emergency');
 }
 
+    public function getAttendanceDetails(Request $request)
+{
+    $subjectId = $request->subject_id;
+    $startDate = $request->start_date;
+    $endDate = $request->end_date;
+
+    // Chota taarifa za somo pamoja na jina la mwalimu kwa kutumia majina mbadala (Alias) ya wazi
+    $subject = DB::table('subjects')
+        ->join('teachers', 'subjects.teacher_id', '=', 'teachers.id')
+        ->select(
+            'subjects.id as sub_id',
+            'subjects.subjectName',
+            'subjects.subjectCode',
+            'teachers.firstname as teacher_firstname',
+            'teachers.middlename as teacher_middlename',
+            'teachers.lastname as teacher_lastname'
+        )
+        ->where('subjects.id', $subjectId)
+        ->first();
+
+    if (!$subject) {
+        return abort(404, 'Subject not found');
+    }
+
+    // Query ya kuvuta mahudhurio
+    $query = DB::table('teacher_attendances')
+        ->leftJoin('timetables', 'teacher_attendances.timetable_id', '=', 'timetables.id')
+        ->leftJoin('timeslots', 'timetables.timeslot_id', '=', 'timeslots.id') 
+        ->select(
+            'teacher_attendances.*', 
+            'timeslots.start_time', 
+            'timeslots.end_time'
+        )
+        ->where('teacher_attendances.subject_id', $subjectId);
+
+    if ($startDate && $endDate) {
+        $query->whereBetween('teacher_attendances.date', [$startDate, $endDate]);
+    }
+
+    $attendances = $query->orderBy('teacher_attendances.date', 'desc')
+                         ->orderBy('timeslots.start_time', 'asc')
+                         ->get();
+
+    return view('details', compact('subject', 'attendances', 'startDate', 'endDate'));
+}
 
 
 }

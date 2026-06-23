@@ -197,6 +197,7 @@
             <th>Total Taught</th>
             <th>Not Taught</th>
             <th>Percentage</th>
+            <th>View</th>
         </tr>
     </thead>
     <tbody>
@@ -214,6 +215,17 @@
                     <?php echo e($row->percentage ?? 0); ?> %
                 </span>
             </td>
+            <td>
+    <a href="<?php echo e(route('subject.attendance.details', [
+            'subject_id' => $row->subject_id ?? $row->id ?? '', 
+            'start_date' => $startDate ?? '', 
+            'end_date' => $endDate ?? '',
+            'semester_id' => $selectedSemester ?? ''
+       ])); ?>" 
+       target="_blank" class="btn btn-sm btn-outline-primary" title="View Details">
+        <i class="bi bi-eye"></i> 
+    </a>
+</td>
         </tr>
         <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
         <tr>
