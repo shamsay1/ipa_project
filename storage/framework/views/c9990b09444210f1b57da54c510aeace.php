@@ -168,6 +168,9 @@ data-bs-target="#navbarMenu">
 <li class="nav-item">
 <a class="nav-link" href="<?php echo e(url('/lessons')); ?>">Lessons</a>
 </li>
+<li class="nav-item">
+<a class="nav-link" href="<?php echo e(route('studentprofile')); ?>">Settings</a>
+</li>
 
 <li class="nav-item">
 <form method="POST" action="<?php echo e(route('logout')); ?>">

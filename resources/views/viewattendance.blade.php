@@ -176,17 +176,16 @@
     <div class="nav">
         <h1>Timetable Management System</h1>
       <ul>
-        <li><a href="<?php echo e(url('/teacher-dash')); ?>">Home</a></li>
-        <li><a href="<?php echo e(url('/teachersub')); ?>">Subjects</a></li>
-        <li><a href="<?php echo e(url('/teachettbl')); ?>">Timetable</a></li>
-        <li><a href="<?php echo e(url('/profile')); ?>">Profile</a></li>
-        <li><a href="<?php echo e(url('/attendance')); ?>">Emergency less</a></li>
+        <li><a href="{{ url('/teacher-dash') }}">Home</a></li>
+        <li><a href="{{ url('/teachersub') }}">Subjects</a></li>
+        <li><a href="{{ url('/teachettbl') }}">Timetable</a></li>
+        <li><a href="{{ url('/profile') }}">Profile</a></li>
+        <li><a href="{{ url('/attendance') }}">Emergency less</a></li>
 
-
-        
+        {{-- Logout for teacher --}}
         <li class="ms-auto">
-            <form method="POST" action="<?php echo e(route('logout')); ?>" class="mb-0">
-                <?php echo csrf_field(); ?>
+            <form method="POST" action="{{ route('logout') }}" class="mb-0">
+                @csrf
                  <button type="submit" style="padding: 5px;background-color: #c9a227;border-radius: 5px;color: white;border: none;cursor: pointer">
                     <i class="bi bi-box-arrow-right me-1"></i> Logout
                 </button>
@@ -207,10 +206,10 @@
             <!-- TABLE SCROLLABLE WRAPPER -->
             <div class="table-scroll shadow">
                 <div style="text-align: center;margin-top: 10px;">
-                <img src="<?php echo e(asset('images/ipalogo1.png')); ?>" alt="" width="120">
+                <img src="{{ asset('images/ipalogo1.png') }}" alt="" width="120">
             </div>
      <h3 style="text-align: center;margin-top: 10px">INSTITUTE OF PUBLIC AND ADMINISTRATION</h3>
-                <h5 style="text-align: center">TEACHER SUBJECT: <b><?php echo e(Auth::user()->firstname); ?> <?php echo e(Auth::user()->middlename); ?> <?php echo e(Auth::user()->lastname); ?></b></h5><br>
+                <h5 style="text-align: center">TEACHER SUBJECT: <b>{{ Auth::user()->firstname }} {{ Auth::user()->middlename }} {{ Auth::user()->lastname }}</b></h5><br>
               <div class="table-responsive">
                 <table class="table table-hover">
                     <thead>
@@ -218,41 +217,30 @@
                             <th colspan="100" style="text-align: center;font-weight: bold;color: white">My subjects Information</th>
                         </tr>
                         <tr>
-                            <th>T/N</th>
-                            <th>Name</th>
-                            <th>Code</th>
-                            <th>Course</th>
+                            
+                            <th>Subject Name</th>
+                            <th>Subject Code</th>
+                            <th>Days remaining</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <?php
-                            $i = 1;
-                        ?>
+                      
                        
-                        <?php $__currentLoopData = $subjects; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $i => $subject): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                        @foreach ($absent_lesson as $abs)
 <tr>
-    <td><?php echo e($i + 1); ?></td>
-
-    
+  
+    {{-- SUBJECT --}}
     <td>
-        <?php echo e($subject['subjectName']); ?>
-
-
-        <?php if(count($subject['courses']) > 1): ?>
-            <span style="color: green;font-weight: bolder">(Joined)</span>
-        <?php endif; ?>
+        {{ $abs->subject->subjectName }}
     </td>
 
-    
-    <td><?php echo e($subject['subjectCode']); ?></td>
-
-    
+    {{-- CODE --}}
+    <td>{{ $abs->subject->subjectCode }}</td>
     <td>
-        <?php echo e(implode(' + ', $subject['courses'])); ?>
-
-    </td>
+    <span style="color: red;font-weight: bold">{{ $abs->remaining_days }} Days Remaining</span>
+</td>
 </tr>
-<?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+@endforeach
 
                      
                         
@@ -278,4 +266,3 @@
 
 </body>
 </html>
-<?php /**PATH C:\Users\PC\Documents\Timetable\resources\views/teachersubject.blade.php ENDPATH**/ ?>

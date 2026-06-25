@@ -88,6 +88,11 @@ Route::post('/insert-timetable', [TimetableGeneratorController::class, 'insertTi
     ->name('print.all.timetables');
     Route::get('/print-teachers', [TimetableGeneratorController::class, 'printAllTeachers'])
     ->middleware('auth')->name('print.all.teachers');
+    Route::get('/timetable/teacher-periods', [TimetableGeneratorController::class, 'getTeacherPeriods'])
+    ->name('timetable.teacher.periods');
+ 
+Route::post('/timetable/swap', [TimetableGeneratorController::class, 'swapTimetable'])
+    ->name('timetable.swap');
     Route::get('/export-teachers-subjects', [TimetableGeneratorController::class, 'exportTeachersSubjects']);
 });
 
@@ -142,6 +147,7 @@ Route::middleware(['auth:teacher'])->group(function () {
     Route::get("/subject/template",[SubjectController::class,"subjectTemplate"])->name("subject.template");
     Route::get("/class/template",[RoomController::class,"roomTemplate"])->name("class.template");
     Route::get("/course/template",[CourseController::class,"export"])->name("course.template");
+    Route::get("/attendance",[TeacherController::class,"attendance"])->name("attendance");
 
     Route::get('/semester/{id}/status/{status}', [SemesterController::class, 'changeStatus'])->name('semester.changeStatus');
 
@@ -194,4 +200,8 @@ Route::middleware(['auth:teacher'])->group(function () {
 Route::middleware(['auth:cr'])->group(function () {
     Route::get("/studentDash",[StudentController::class,"index"])->name("student.dash");
     Route::get("/studentSub",[CrInfoController::class,"studentsub"]);
+    Route::get("/profile1",[CrInfoController::class,"profile"])->name("studentprofile");
+
+    Route::post('/profile/change-password1', [CrInfoController::class, 'changePassword'])->name('profile.changePassword1');
+
 });

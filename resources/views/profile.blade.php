@@ -258,6 +258,8 @@
         <li><a href="{{ url('/teachersub') }}">Subjects</a></li>
         <li><a href="{{ url('/teachettbl') }}">Timetable</a></li>
         <li><a href="{{ url('/profile') }}">Profile</a></li>
+        <li><a href="{{ url('/attendance') }}">Emergency less</a></li>
+
 
         {{-- Logout for teacher --}}
         <li class="ms-auto">
@@ -286,7 +288,7 @@
                 <img src="{{ asset('images/ipalogo1.png') }}" alt="" width="120">
             </div>
      <h3 style="text-align: center;margin-top: 10px">INSTITUTE OF PUBLIC AND ADMINISTRATION</h3>
-                <h5 style="text-align: center">TEACHER SUBJECT: <b>{{ Auth::user()->firstname }} {{ Auth::user()->lastname }}</b></h5><br>
+                <h5 style="text-align: center">TEACHER'S Full name: <b>{{ Auth::user()->firstname }} {{ Auth::user()->middlename }} {{ Auth::user()->lastname }}</b></h5><br>
               <div class="table-responsive">
                 <div class="text-end mt-3 nodis">
    
@@ -296,7 +298,7 @@
         <div class="password-card">
             <h4 style="text-align: center">Changing password form</h4>
 
-            <form action="" method="POST">
+            <form action="{{ route('profile.changePassword') }}" method="POST">
                 @csrf
 
                 {{-- Current Password --}}
@@ -320,7 +322,7 @@
                 {{-- Confirm New Password --}}
                 <div class="mb-4">
                     <label for="new_password_confirmation" class="form-label">Confirm password</label>
-                    <input type="password" name="new_password_confirmation" id="new_password_confirmation" class="form-control" required>
+                    <input type="password" name="confirm_password" id="new_password_confirmation" class="form-control" required>
                 </div>
 
                 <div class="d-grid">
@@ -349,6 +351,27 @@
     
     </div>
 
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+@if(session('success'))
+<script>
+Swal.fire({
+    icon: 'success',
+    title: 'Success!',
+    text: '{{ session('success') }}',
+    confirmButtonText: 'OK'
+});
+</script>
 
+@endif
+@if(session('error'))
+<script>
+Swal.fire({
+    icon: 'error',
+    title: 'Error!',
+    text: '{{ session('error') }}',
+    confirmButtonText: 'OK'
+});
+</script>
+@endif
 </body>
 </html>

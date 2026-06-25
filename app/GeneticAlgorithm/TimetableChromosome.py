@@ -10,32 +10,44 @@ class TimetableChromosome:
         self.fitness = 0.0
 
     # ================================================================== #
+    # CONSTANTS                                                           #
+    # ================================================================== #
+
+    STUDENT_THRESHOLD  = 60    # student count above which we want a bigger room
+    LARGE_THEORY_CAP   = 80    # min capacity for Theory rooms (degree always; large groups)
+    LARGE_LAB_CAP      = 50    # min capacity for Lab rooms when group is large
+    MIN_DAILY_SESSIONS = 3     # soft target: no day should have fewer than this
+    MAX_TEACHER_DAYS   = 5     # a teacher must not teach on more than this many days
+
+    # ================================================================== #
     # TIME RULES                                                          #
     # ================================================================== #
 
     def allowed_time(self, level, nta_level, day_name, hour):
+        """
+        Return True if `hour` (start-of-slot) is within the allowed window
+        for the given course level, nta, and day.
 
-        if day_name in ["saturday", "sunday"]:
-            # 🔵 FIX 3 — DEGREE WEEKEND: 08:00–16:00 only (many sessions
-            # allowed here since weekday limit is 3; this is where degree
-            # subjects get their bulk of sessions).
+        Degree weekday  : 14:00 – 19:00  (rooms cap>=80, 3 consecutive slots)
+        Degree weekend  : 08:00 – 16:00
+        NTA-4 weekday   : 08:00 – 16:00  (morning only, regardless of level)
+        Diploma weekday : 08:00 – 16:00
+        Diploma weekend : blocked entirely (set elsewhere via weekend_blocked)
+        """
+        if day_name in ("saturday", "sunday"):
             if level == "degree":
                 return 8 <= hour < 16
-            # All other levels: from 08:00 onward on weekends
             return hour >= 8
 
-        # 🔵 NTA-4 OVERRIDE (weekdays): morning only, regardless of
-        # course_level (degree or diploma).
+        # NTA-4 override — morning only on weekdays
         if self.timetable.is_nta4(nta_level):
             return 8 <= hour < 16
 
-        # 🔵 FIX 5 — DEGREE WEEKDAY: window is now 14:00–18:00 only
-        # (never reaches night hours like 20:00). Max 3 sessions/day
-        # is still enforced separately in the daily-limit check.
+        # 🔵 DEGREE weekday: 14:00 – 19:00
         if level == "degree":
-            return 14 <= hour < 18
+            return 14 <= hour < 19
 
-        # DIPLOMA weekday: 08:00–16:00 (unchanged)
+        # Diploma weekday: 08:00 – 16:00
         if level == "diploma":
             return 8 <= hour < 16
 
@@ -60,74 +72,33 @@ class TimetableChromosome:
         return True
 
     def _is_shared_group(self, subj_list):
-        """True when the subjects carry a non-empty group_name (shared lecture)."""
         return any(s.get("group_name") for s in subj_list)
 
     # ------------------------------------------------------------------ #
-    # 🔵 FIX 4 — STUDENT-COUNT-AWARE ROOM SELECTION                       #
-    #
-    # Rule (applies to EVERY subject/group, shared or solo):
-    #   1. Work out how many students attend this scheduling group via
-    #      timetable.get_group_student_count(subj_list):
-    #        - solo subject  -> students of its own course+nta_level
-    #        - shared group  -> sum of students across every distinct
-    #          course+nta_level pair attending the joint lecture
-    #          (e.g. NTA-5 of course A + NTA-5 of course B + ...)
-    #   2. If that total is GREATER THAN 60:
-    #        - Theory subject -> must use a room with capacity >= 80
-    #        - Practical/Lab subject -> must use a Lab room with
-    #          capacity >= 50
-    #   3. If the total is 60 or below -> use the normal room pool,
-    #      no inflated capacity requirement.
-    #
-    # As before, this never overrides a HARD requirement (a lab
-    # subject always needs a room of the matching practical_type); it
-    # only narrows/widens the *candidate* room list, and always falls
-    # back gracefully if no room meets the preferred capacity.
+    # 🔵 DIPLOMA-IN-LARGE-ROOM: does this diploma group's permanent room  #
+    # have capacity >= 80? If so they must finish before 14:00 to vacate  #
+    # the room for degree sessions.                                       #
     # ------------------------------------------------------------------ #
-
-    STUDENT_THRESHOLD = 60   # student-count cut-off that triggers a bigger room
-    LARGE_THEORY_CAP   = 80  # min capacity for Theory rooms once threshold is passed
-    LARGE_LAB_CAP      = 50  # min capacity for Lab rooms once threshold is passed
-
-    # 🔵 FIX 5 — DAILY-LOAD / TEACHER-WORKLOAD CONSTANTS
-    #
-    # MIN_DAILY_SESSIONS: once an nta (course + nta_level) has ANY
-    # session on a given day, that day should end up with at least
-    # this many sessions (no lone single-period days). Enforced as a
-    # strong soft rule: generation is biased to top up days that
-    # already have 1-2 sessions before opening a brand-new day, and
-    # calculate_fitness penalizes any day that still falls short. A
-    # subject with credit_hour 1 cannot reach this alone — in that
-    # case the penalty simply nudges other subjects to land on the
-    # same day to make up the difference.
-    #
-    # MAX_TEACHER_DAYS: a teacher's subjects must not be spread across
-    # more than this many distinct days in the week — i.e. every
-    # teacher keeps at least (len(days) - MAX_TEACHER_DAYS) full days
-    # free. Enforced as a hard-ish rule during generation/mutation,
-    # relaxed only in the final "last resort" tiers, and penalized in
-    # calculate_fitness if it still ends up violated.
-    MIN_DAILY_SESSIONS = 3
-    MAX_TEACHER_DAYS = 5
-
-    def _boosted_days(self, subj_list, nta_daily_count):
-        """
-        Days that already have 1..(MIN_DAILY_SESSIONS-1) sessions for
-        this nta — placing another block here helps reach the minimum
-        instead of opening a fresh, under-filled day.
-        """
+    def _group_uses_large_room(self, subj_list):
         t = self.timetable
-        boosted = []
-        for day_id in range(len(t.days)):
-            for s in subj_list:
-                key = (s["course_id"], s["nta_level"], day_id)
-                count = nta_daily_count.get(key, 0)
-                if 0 < count < self.MIN_DAILY_SESSIONS:
-                    boosted.append(day_id)
-                    break
-        return boosted
+        for s in subj_list:
+            perm = t.get_permanent_rooms(s["course_id"], s["nta_level"])
+            for room_id in perm:
+                if room_id in t.large_room_ids:
+                    return True
+        return False
 
+    # ------------------------------------------------------------------ #
+    # 🔵 DEGREE ROOM CANDIDATE LIST WITH STUDENT-COUNT PRIORITY           #
+    #                                                                     #
+    # For degree subjects:                                                #
+    #   - MUST use a room with capacity >= 80 (large_rooms_sorted)        #
+    #   - Among large rooms, prefer those with higher capacity first when  #
+    #     the group has more students (priority = student_count desc)      #
+    #   - Diploma subjects who SHARE a subject (group_name set) may also   #
+    #     land in large rooms during the morning window; non-shared        #
+    #     diploma subjects get their permanent/normal rooms as before.     #
+    # ------------------------------------------------------------------ #
     def _group_candidate_rooms(self, subj_list,
                                 relax_room_preference=False,
                                 relax_capacity=False):
@@ -135,6 +106,14 @@ class TimetableChromosome:
 
         student_count = t.get_group_student_count(subj_list)
         needs_large_room = student_count > self.STUDENT_THRESHOLD
+
+        levels = self._group_levels(subj_list)
+        is_degree = ("degree" in levels and
+                     not any(t.is_nta4(s.get("nta_level")) for s in subj_list))
+
+        # Is this a shared-subject group that includes diploma students?
+        is_shared = self._is_shared_group(subj_list)
+        is_diploma_shared = (not is_degree) and ("diploma" in levels) and is_shared
 
         lab_subject = next(
             (s for s in subj_list
@@ -154,14 +133,50 @@ class TimetableChromosome:
                             if (r.get("capacity") or 0) >= self.LARGE_LAB_CAP]
                 if filtered:
                     return filtered
-                # No matching lab meets the capacity — there is no
-                # bigger lab to fall back to (lab type must match), so
-                # use whatever matching lab exists regardless of size.
             return base
 
-        # ---------- THEORY SUBJECTS ---------- #
+        # ---------- DEGREE THEORY: must use large rooms (cap >= 80) ---------- #
+        if is_degree and not relax_capacity:
+            # Sort by capacity desc so that NTAs with more students
+            # naturally compete for the biggest rooms (the GA's random
+            # selection from this pre-sorted list is biased toward the
+            # front, but any room in the list is valid).
+            large = list(t.large_rooms_sorted)   # already sorted cap desc
+            if large:
+                # Further bias: if student_count is high, keep only the
+                # top half of large rooms (the biggest ones).
+                if student_count > 40 and len(large) > 1:
+                    large = large[: max(1, len(large) // 2)]
+                return large
+            # No large room in the system — fallback to any non-lab room
+            return [r for r in t.rooms if r["type"] != "Lab"]
 
-        # Gather permanent rooms for the group (may span several courses)
+        # ---------- DIPLOMA SHARED (shares subject with degree/other courses) #
+        # These groups may be allocated to large rooms during the morning      #
+        # window so they co-share the same physical space.  We allow large     #
+        # rooms for them too so _find_slot can place them before 14:00.        #
+        if is_diploma_shared and not relax_capacity:
+            # Allow large rooms for shared diploma groups
+            perm_rooms = []
+            if not relax_room_preference:
+                for s in subj_list:
+                    for rid in t.get_permanent_rooms(s["course_id"], s["nta_level"]):
+                        if rid not in perm_rooms:
+                            perm_rooms.append(rid)
+            if perm_rooms:
+                base = [r for r in t.rooms if r["id"] in perm_rooms]
+                # If permanent room is already large, use it; otherwise
+                # fall back to system-wide large rooms so they can share.
+                has_large = any(r["id"] in t.large_room_ids for r in base)
+                if has_large:
+                    return base
+            # No large permanent room → use system-wide large rooms
+            large = list(t.large_rooms_sorted)
+            if large:
+                return large
+            return [r for r in t.rooms if r["type"] != "Lab"]
+
+        # ---------- NORMAL DIPLOMA / OTHER THEORY ---------- #
         permanent_rooms = []
         if not relax_room_preference:
             for s in subj_list:
@@ -175,23 +190,16 @@ class TimetableChromosome:
             base = [r for r in t.rooms if r["type"] != "Lab"]
 
         if needs_large_room and not relax_capacity:
-            # First preference: a permanent room that is ALSO big
-            # enough.
             filtered = [r for r in base
                         if (r.get("capacity") or 0) >= self.LARGE_THEORY_CAP]
             if filtered:
                 return filtered
-            # Next: any non-lab room in the whole system big enough —
-            # the capacity requirement matters more than sticking to
-            # the permanent room once the group is genuinely large.
             system_wide_large = [
                 r for r in t.rooms
                 if r["type"] != "Lab" and (r.get("capacity") or 0) >= self.LARGE_THEORY_CAP
             ]
             if system_wide_large:
                 return system_wide_large
-            # Nothing in the whole system is big enough — fall back to
-            # the permanent/base room set, then any non-lab room.
             if base:
                 return base
             return [r for r in t.rooms if r["type"] != "Lab"]
@@ -200,16 +208,6 @@ class TimetableChromosome:
 
     # ================================================================== #
     # SLOT SEARCH — one block / one session                              #
-    # ================================================================== #
-    #
-    # Relaxation flags (never touch hard conflict rules):
-    #   relax_day_reuse   — allow a day the group already uses
-    #   relax_room_pref   — ignore permanent-room preference
-    #   relax_daily_limit — drop soft daily workload caps
-    #   relax_capacity    — ignore room-capacity preference
-    #   relax_time_window — ignore degree/diploma/nta4 time window
-    #                       (LAST RESORT — ensures nothing is left out)
-    #   exhaustive        — iterate every day, not random sampling
     # ================================================================== #
 
     def _find_slot(self, subj_list, levels, nta, is_nta4, block,
@@ -224,9 +222,23 @@ class TimetableChromosome:
 
         t = self.timetable
 
-        # When time-window is relaxed we allow any hour on any day;
-        # when diploma/nta4 weekends are normally blocked that is also
-        # lifted so the subject can land somewhere.
+        is_degree = "degree" in levels and not is_nta4
+        is_shared = self._is_shared_group(subj_list)
+        is_diploma_shared = (not is_degree) and ("diploma" in levels) and is_shared
+
+        # ------------------------------------------------------------------
+        # 🔵 DIPLOMA-IN-LARGE-ROOM: diploma groups whose permanent room has
+        # capacity >= 80 must finish BY 14:00 on weekdays to vacate for
+        # degree sessions.  Also applies to diploma-shared groups that will
+        # land in large rooms.
+        # ------------------------------------------------------------------
+        is_diploma_large_room = (
+            not is_degree
+            and "diploma" in levels
+            and not is_nta4
+            and (self._group_uses_large_room(subj_list) or is_diploma_shared)
+        )
+
         weekend_blocked = (not relax_time_window) and (
             is_nta4 or ("diploma" in levels)
         )
@@ -240,9 +252,6 @@ class TimetableChromosome:
                 return False
             if not relax_day_reuse and day_id in used_days_group:
                 return False
-            # 🔵 FIX 5 — teacher weekly-day cap: don't open a brand-new
-            # day for a teacher who is already spread across
-            # MAX_TEACHER_DAYS distinct days.
             if not relax_teacher_days and teacher_days is not None:
                 for s in subj_list:
                     tdays = teacher_days.get(s["teacher_id"], set())
@@ -261,11 +270,18 @@ class TimetableChromosome:
                     if not (day_name == "friday" and hour == 12)
                 ]
             else:
-                valid_slots = [
-                    idx for idx, hour in enumerate(t.timeslot_start_hours)
-                    if not (day_name == "friday" and hour == 12)
-                    and self._group_allowed(levels, nta, day_name, hour)
-                ]
+                valid_slots = []
+                for idx, hour in enumerate(t.timeslot_start_hours):
+                    if day_name == "friday" and hour == 12:
+                        continue
+                    if not self._group_allowed(levels, nta, day_name, hour):
+                        continue
+                    # 🔵 DIPLOMA-IN-LARGE-ROOM: only slots starting < 14:00
+                    if is_diploma_large_room:
+                        if hour >= 14:
+                            continue
+                    valid_slots.append(idx)
+
             valid_slots.sort()
 
             for i in range(len(valid_slots)):
@@ -274,6 +290,12 @@ class TimetableChromosome:
                 slots = valid_slots[i:i + block]
                 if slots[-1] != slots[0] + (block - 1):
                     continue
+
+                # Diploma-in-large-room: last slot of the block must also < 14
+                if is_diploma_large_room and not relax_time_window:
+                    last_hour = t.timeslot_start_hours[slots[-1]]
+                    if last_hour >= 14:
+                        continue
 
                 # ---------- HARD CONFLICT CHECK ---------- #
                 conflict = False
@@ -294,7 +316,24 @@ class TimetableChromosome:
                     relax_room_preference=relax_room_preference,
                     relax_capacity=relax_capacity,
                 )
-                random.shuffle(candidate_rooms)
+                # 🔵 DEGREE STUDENT-COUNT PRIORITY: keep sort order from
+                # large_rooms_sorted (cap desc) but shuffle only within equal-
+                # capacity bands to introduce diversity without losing the
+                # biggest-room-first bias.
+                if is_degree:
+                    # Use as-is (already sorted by capacity desc); just
+                    # add a small random offset within equal-cap groups.
+                    by_cap = defaultdict(list)
+                    for r in candidate_rooms:
+                        by_cap[(r.get("capacity") or 0)].append(r)
+                    ordered_rooms = []
+                    for cap in sorted(by_cap.keys(), reverse=True):
+                        group = by_cap[cap]
+                        random.shuffle(group)
+                        ordered_rooms.extend(group)
+                    candidate_rooms = ordered_rooms
+                else:
+                    random.shuffle(candidate_rooms)
 
                 for room in candidate_rooms:
                     room_idx = next(
@@ -312,11 +351,8 @@ class TimetableChromosome:
                         for s in subj_list:
                             daily_key = (s["course_id"], s["nta_level"], day_id)
                             count = nta_daily_count.get(daily_key, 0) + block
-                            # 🔵 FIX 3 — degree weekday max = 3 (unchanged);
-                            # degree weekends use the general max (8) so
-                            # more sessions can land there.
-                            if ("degree" in levels and not is_nta4
-                                    and day_name not in ("saturday", "sunday")):
+                            # Degree weekday: max 3 consecutive sessions
+                            if is_degree and day_name not in ("saturday", "sunday"):
                                 if count > 3:
                                     limit_ok = False; break
                             if count > 8:
@@ -337,11 +373,6 @@ class TimetableChromosome:
                     return result
             return None
 
-        # 🔵 FIX 5 — bias random attempts toward days that already
-        # have 1-2 sessions for this nta, so they get topped up to the
-        # minimum instead of leaving them stuck below it. Still falls
-        # through to fully random attempts the rest of the time so new
-        # days can still be opened when needed.
         boosted_days = [] if relax_min_daily else self._boosted_days(subj_list, nta_daily_count)
 
         for attempt_no in range(attempts):
@@ -354,6 +385,18 @@ class TimetableChromosome:
                 return result
         return None
 
+    def _boosted_days(self, subj_list, nta_daily_count):
+        t = self.timetable
+        boosted = []
+        for day_id in range(len(t.days)):
+            for s in subj_list:
+                key = (s["course_id"], s["nta_level"], day_id)
+                count = nta_daily_count.get(key, 0)
+                if 0 < count < self.MIN_DAILY_SESSIONS:
+                    boosted.append(day_id)
+                    break
+        return boosted
+
     # ================================================================== #
     # GENERATE                                                            #
     # ================================================================== #
@@ -363,20 +406,40 @@ class TimetableChromosome:
         self.genes = []
         t = self.timetable
 
-        teacher_busy = set()
-        room_busy = set()
-        nta_busy = set()
+        teacher_busy   = set()
+        room_busy      = set()
+        nta_busy       = set()
         nta_daily_count = {}
-        teacher_days = defaultdict(set)
+        teacher_days   = defaultdict(set)
 
         self.expected_blocks = {}
 
         session_counter = 0
 
-        for subj_list, blocks in t.build_session_plan():
-
+        # ------------------------------------------------------------------ #
+        # 🔵 DEGREE GENERATION ORDER: schedule degree NTAs with LARGER         #
+        # student counts FIRST so they get first pick of the biggest rooms.   #
+        # Build plan then re-sort: degree groups desc by student count,        #
+        # all other groups keep their original order after degree groups.      #
+        # ------------------------------------------------------------------ #
+        full_plan = t.build_session_plan()
+        degree_groups = []
+        other_groups  = []
+        for subj_list, blocks in full_plan:
             levels = self._group_levels(subj_list)
-            nta = subj_list[0].get("nta_level")
+            is_nta4 = t.is_nta4(subj_list[0].get("nta_level"))
+            if "degree" in levels and not is_nta4:
+                sc = t.get_group_student_count(subj_list)
+                degree_groups.append((sc, subj_list, blocks))
+            else:
+                other_groups.append((subj_list, blocks))
+        degree_groups.sort(key=lambda x: x[0], reverse=True)
+        ordered_plan = [(sg, bl) for _, sg, bl in degree_groups] + other_groups
+
+        for subj_list, blocks in ordered_plan:
+
+            levels  = self._group_levels(subj_list)
+            nta     = subj_list[0].get("nta_level")
             is_nta4 = t.is_nta4(nta)
 
             for s in subj_list:
@@ -385,7 +448,7 @@ class TimetableChromosome:
             used_days_group = []
 
             allowed_weekdays = None
-            if levels == {"degree"} and not is_nta4:
+            if "degree" in levels and not is_nta4:
                 weekday_ids = [
                     i for i, d in enumerate(t.days)
                     if d["day_name"].lower() not in ["saturday", "sunday"]
@@ -407,8 +470,7 @@ class TimetableChromosome:
                     attempts=400,
                 )
 
-                # ---- TIER 2: exhaustive day search, drop day-reuse
-                # and room-preference soft rules ---- #
+                # ---- TIER 2: exhaustive, relax day-reuse + room-pref ---- #
                 if placement is None:
                     placement = self._find_slot(
                         subj_list, levels, nta, is_nta4, block,
@@ -421,8 +483,7 @@ class TimetableChromosome:
                         exhaustive=True,
                     )
 
-                # ---- TIER 3: also drop daily workload limits and
-                # capacity preference ---- #
+                # ---- TIER 3: also relax daily limits + capacity ---- #
                 if placement is None:
                     placement = self._find_slot(
                         subj_list, levels, nta, is_nta4, block,
@@ -439,12 +500,7 @@ class TimetableChromosome:
                         exhaustive=True,
                     )
 
-                # ---- TIER 4 (FIX 1) — LAST RESORT: also drop the
-                # time-window rule (degree/diploma/nta4 hour window).
-                # Only hard conflicts are still respected.
-                # Guarantees every subject is placed unless there is a
-                # genuine double-booking impossibility (e.g. a teacher
-                # with more subjects than there are hours in the week). ---- #
+                # ---- TIER 4 — LAST RESORT: relax time-window too ---- #
                 if placement is None:
                     placement = self._find_slot(
                         subj_list, levels, nta, is_nta4, block,
@@ -463,8 +519,6 @@ class TimetableChromosome:
                     )
 
                 if placement is None:
-                    # Genuinely impossible (teacher/room double-booked
-                    # every single slot in the timetable) — skip.
                     continue
 
                 day_id, slots, room_idx = placement
@@ -474,11 +528,11 @@ class TimetableChromosome:
                         self.genes.append({
                             "subject_id": s["id"],
                             "teacher_id": s["teacher_id"],
-                            "course_id": s["course_id"],
-                            "nta_level": s["nta_level"],
+                            "course_id":  s["course_id"],
+                            "nta_level":  s["nta_level"],
                             "timeslot_id": ts,
-                            "room_id": room_idx,
-                            "day_id": day_id,
+                            "room_id":    room_idx,
+                            "day_id":     day_id,
                             "session_id": session_id,
                         })
 
@@ -487,9 +541,7 @@ class TimetableChromosome:
                         teacher_busy.add((s["teacher_id"], day_id, ts))
                         room_busy.add((room_idx, day_id, ts))
                         nta_busy.add((s["course_id"], s["nta_level"], day_id, ts))
-
                     teacher_days[s["teacher_id"]].add(day_id)
-
                     daily_key = (s["course_id"], s["nta_level"], day_id)
                     nta_daily_count[daily_key] = (
                         nta_daily_count.get(daily_key, 0) + block
@@ -508,8 +560,6 @@ class TimetableChromosome:
         t = self.timetable
         subject_lookup = t.subject_map
 
-        # Build a map of currently occupied (room_idx, day, ts) → gene ids
-        # so we can check for conflicts before forcing a room change.
         slot_occupant = {}
         for gene in self.genes:
             key = (gene["room_id"], gene["day_id"], gene["timeslot_id"])
@@ -524,7 +574,6 @@ class TimetableChromosome:
 
         for key, genes in group_rooms.items():
 
-            # Never move lab-required subjects out of their lab room
             has_lab = any(
                 subject_lookup.get(g["subject_id"], {}).get("required_lab")
                 and subject_lookup.get(g["subject_id"], {}).get("required_lab") != "Theory"
@@ -533,16 +582,18 @@ class TimetableChromosome:
             if has_lab:
                 continue
 
-            # 🔵 FIX 4 — if this group needs a "large room" (student
-            # count > threshold), do NOT force it back into a small
-            # permanent room; leave the GA-selected large-capacity
-            # room as-is.
             subj_list_for_group = [
                 subject_lookup[g["subject_id"]]
                 for g in genes
                 if g["subject_id"] in subject_lookup
             ]
+
             if subj_list_for_group:
+                levels = self._group_levels(subj_list_for_group)
+                # 🔵 Never force degree groups back to a (possibly small)
+                # permanent room — they must stay in large rooms.
+                if "degree" in levels:
+                    continue
                 student_count = t.get_group_student_count(subj_list_for_group)
                 if student_count > TimetableChromosome.STUDENT_THRESHOLD:
                     continue
@@ -614,9 +665,9 @@ class TimetableChromosome:
         penalty = 0
 
         teacher_assign = {}
-        room_assign = {}
-        nta_assign = {}
-        subject_count = {}
+        room_assign    = {}
+        nta_assign     = {}
+        subject_count  = {}
 
         for g in self.genes:
             subject_count[g["subject_id"]] = (
@@ -625,6 +676,7 @@ class TimetableChromosome:
 
         expected = getattr(self, "expected_blocks", None)
 
+        # ---- 1. Session-count hard constraint ---- #
         for s in timetable.subjects:
             target = expected.get(s["id"]) if expected else 3
             if target is None:
@@ -632,47 +684,98 @@ class TimetableChromosome:
             if subject_count.get(s["id"], 0) != target:
                 penalty += 100000
 
+        # ---- 2. Teacher double-booking ---- #
         for g in self.genes:
             key = (g["teacher_id"], g["day_id"], g["timeslot_id"])
             if key in teacher_assign:
                 penalty += 100000
             teacher_assign[key] = True
 
+        # ---- 3. Room double-booking ---- #
         for g in self.genes:
             key = (g["room_id"], g["day_id"], g["timeslot_id"])
             if key in room_assign:
                 penalty += 100000
             room_assign[key] = True
 
+        # ---- 4. NTA double-booking ---- #
         for g in self.genes:
             key = (g["course_id"], g["nta_level"], g["day_id"], g["timeslot_id"])
             if key in nta_assign:
                 penalty += 100000
             nta_assign[key] = True
 
-        # ---------------- NTA-4 TIME WINDOW PENALTY ---------------- #
+        # ---- 5. NTA-4 morning window ---- #
         for g in self.genes:
             if timetable.is_nta4(g["nta_level"]):
                 day_name = timetable.days[g["day_id"]]["day_name"].lower()
-                hour = timetable.timeslot_start_hours[g["timeslot_id"]]
-                if day_name not in ["saturday", "sunday"] and not (8 <= hour < 16):
+                hour     = timetable.timeslot_start_hours[g["timeslot_id"]]
+                if day_name not in ("saturday", "sunday") and not (8 <= hour < 16):
                     penalty += 50000
 
-        # ---------------- DEGREE TIME WINDOW PENALTY --------------- #
+        # ---- 6. Degree time-window penalty ---- #
+        # Weekday: 14:00–19:00; Weekend: 08:00–16:00
         for g in self.genes:
             course = timetable.course_map.get(g["course_id"], {})
-            level = course.get("course_level", "").lower()
+            level  = course.get("course_level", "").lower()
             if level == "degree" and not timetable.is_nta4(g["nta_level"]):
                 day_name = timetable.days[g["day_id"]]["day_name"].lower()
-                hour = timetable.timeslot_start_hours[g["timeslot_id"]]
+                hour     = timetable.timeslot_start_hours[g["timeslot_id"]]
                 if day_name in ("saturday", "sunday"):
                     if not (8 <= hour < 16):
                         penalty += 30000
                 else:
-                    if hour < 14:
-                        penalty += 30000
+                    if not (14 <= hour < 19):
+                        penalty += 50000
 
-        # ---------------- NO-GAP / CONSECUTIVE PENALTY ------------- #
+        # ---- 7. Degree room-capacity penalty ---- #
+        # Every degree (non-lab, non-nta4) gene must be in a room cap >= 80
+        for g in self.genes:
+            course = timetable.course_map.get(g["course_id"], {})
+            level  = course.get("course_level", "").lower()
+            if level == "degree" and not timetable.is_nta4(g["nta_level"]):
+                room = timetable.rooms[g["room_id"]]
+                if room.get("type") != "Lab":
+                    if (room.get("capacity") or 0) < self.LARGE_THEORY_CAP:
+                        penalty += 40000
+
+        # ---- 8. Diploma-in-large-room: must start before 14:00 weekday ---- #
+        for g in self.genes:
+            course = timetable.course_map.get(g["course_id"], {})
+            level  = course.get("course_level", "").lower()
+            if level != "diploma":
+                continue
+            if timetable.is_nta4(g["nta_level"]):
+                continue
+            day_name = timetable.days[g["day_id"]]["day_name"].lower()
+            if day_name in ("saturday", "sunday"):
+                continue
+            room = timetable.rooms[g["room_id"]]
+            if room["id"] in timetable.large_room_ids:
+                hour = timetable.timeslot_start_hours[g["timeslot_id"]]
+                if hour >= 14:
+                    penalty += 40000
+
+        # ---- 9. Multi-day split: every subject must span >= 2 days ---- #
+        # Siku moja ichukuwe vipindi 2, siku nyingine ichukue kilichobaki.
+        # If all timeslots of a subject land on the same day → penalty.
+        subj_days = defaultdict(set)
+        for g in self.genes:
+            subj_days[g["subject_id"]].add(g["day_id"])
+
+        for subj_id, days_used in subj_days.items():
+            subj = timetable.subject_map.get(subj_id)
+            if subj is None:
+                continue
+            try:
+                ch = int(subj.get("credit_hour", 2))
+            except (TypeError, ValueError):
+                ch = 2
+            # Only penalise if credit_hour >= 2 (ch==1 cannot split)
+            if ch >= 2 and len(days_used) < 2:
+                penalty += 60000
+
+        # ---- 10. No-gap / consecutive sessions penalty ---- #
         daily_slots = defaultdict(set)
         for g in self.genes:
             key = (g["course_id"], g["nta_level"], g["day_id"])
@@ -681,21 +784,30 @@ class TimetableChromosome:
         for key, slots in daily_slots.items():
             if len(slots) <= 1:
                 if len(slots) == 1:
-                    # 🔵 FIX 5 — a day with just 1 session for this nta
-                    # falls short of MIN_DAILY_SESSIONS.
                     penalty += (TimetableChromosome.MIN_DAILY_SESSIONS - 1) * 8000
                 continue
             ordered = sorted(slots)
             span = ordered[-1] - ordered[0] + 1
             gaps = span - len(ordered)
+
             if gaps > 0:
-                penalty += gaps * 2000
-            # 🔵 FIX 5 — still short of the minimum even though it's
-            # more than one session that day (e.g. 2 sessions).
+                base_gap_penalty = gaps * 5000
+                max_gap = max(
+                    ordered[i+1] - ordered[i] - 1
+                    for i in range(len(ordered) - 1)
+                )
+                if max_gap >= 3:
+                    base_gap_penalty += max_gap * 15000
+                elif max_gap == 2:
+                    base_gap_penalty += max_gap * 8000
+                elif max_gap == 1:
+                    base_gap_penalty += max_gap * 3000
+                penalty += base_gap_penalty
+
             if len(slots) < TimetableChromosome.MIN_DAILY_SESSIONS:
                 penalty += (TimetableChromosome.MIN_DAILY_SESSIONS - len(slots)) * 8000
 
-        # ---------------- FIX 5 — TEACHER MAX-DAYS PENALTY ---------- #
+        # ---- 11. Teacher max-days penalty ---- #
         teacher_day_sets = defaultdict(set)
         for g in self.genes:
             teacher_day_sets[g["teacher_id"]].add(g["day_id"])
@@ -706,7 +818,7 @@ class TimetableChromosome:
                     (len(days_used) - TimetableChromosome.MAX_TEACHER_DAYS) * 40000
                 )
 
-        # ---------------- SHARED-GROUP COHESION PENALTY ------------ #
+        # ---- 12. Shared-group cohesion: same day + room for all members ---- #
         session_groups = defaultdict(set)
         for g in self.genes:
             sid = g.get("session_id")
@@ -718,13 +830,7 @@ class TimetableChromosome:
             if len(combos) > 1:
                 penalty += 20000 * (len(combos) - 1)
 
-        # ---------------- FIX 4 — LARGE-GROUP ROOM-CAPACITY PENALTY - #
-        # If a session's student count exceeds the threshold, every
-        # room used for that session should meet the large-room
-        # capacity (Theory >= 80, Lab >= 50). This nudges the GA away
-        # from squeezing a big group into an undersized room, even
-        # though _group_candidate_rooms already steers placement that
-        # way during generation/mutation.
+        # ---- 13. Large-group room-capacity penalty ---- #
         session_subject_ids = defaultdict(set)
         for g in self.genes:
             sid = g.get("session_id")
@@ -742,11 +848,9 @@ class TimetableChromosome:
             ]
             if not subj_list:
                 continue
-
             student_count = timetable.get_group_student_count(subj_list)
             if student_count <= TimetableChromosome.STUDENT_THRESHOLD:
                 continue
-
             is_lab = any(
                 s.get("required_lab") and s.get("required_lab") != "Theory"
                 for s in subj_list
@@ -755,7 +859,6 @@ class TimetableChromosome:
                 TimetableChromosome.LARGE_LAB_CAP if is_lab
                 else TimetableChromosome.LARGE_THEORY_CAP
             )
-
             session_room_idxs = {
                 g["room_id"] for g in self.genes if g.get("session_id") == sid
             }
@@ -765,6 +868,39 @@ class TimetableChromosome:
                     continue
                 if (room.get("capacity") or 0) < min_cap:
                     penalty += 15000
+
+        # ---- 14. Degree student-count room-priority penalty ---- #
+        # NTAs with more students should prefer larger rooms.
+        # Penalise lightly when a high-student degree NTA lands in a
+        # smaller large-room while a low-student NTA occupies a bigger one.
+        # (Soft nudge — not a hard constraint.)
+        degree_session_room = {}   # session_id -> (room cap, student_count)
+        for g in self.genes:
+            course = timetable.course_map.get(g["course_id"], {})
+            level  = course.get("course_level", "").lower()
+            if level != "degree":
+                continue
+            if timetable.is_nta4(g["nta_level"]):
+                continue
+            sid  = g.get("session_id")
+            room = room_by_idx.get(g["room_id"])
+            if sid is None or room is None:
+                continue
+            if sid not in degree_session_room:
+                sc = timetable.get_student_count(g["course_id"], g["nta_level"])
+                degree_session_room[sid] = (room.get("capacity") or 0, sc)
+
+        if len(degree_session_room) > 1:
+            items = list(degree_session_room.values())
+            for i in range(len(items)):
+                for j in range(i + 1, len(items)):
+                    cap_i, sc_i = items[i]
+                    cap_j, sc_j = items[j]
+                    # If NTA i has more students but a SMALLER room than NTA j
+                    if sc_i > sc_j and cap_i < cap_j:
+                        penalty += 5000
+                    elif sc_j > sc_i and cap_j < cap_i:
+                        penalty += 5000
 
         self.fitness = 1 / (1 + penalty)
         return self.fitness

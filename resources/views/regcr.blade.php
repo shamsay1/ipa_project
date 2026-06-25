@@ -425,6 +425,12 @@
 
 </select>
 </div>
+<div class="col-md-12 mb-3">
+    <label class="form-label">
+        New Password <small class="text-muted">(Optional)</small>
+    </label>
+    <input type="password" name="password" class="form-control">
+</div>
 
 </div>
 

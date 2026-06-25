@@ -12,11 +12,11 @@ class TimetableGA:
                  max_generations=100, time_limit=120):
 
         self.population_size = population_size
-        self.mutation_rate = mutation_rate
-        self.crossover_rate = crossover_rate
-        self.elitism_count = elitism_count
+        self.mutation_rate   = mutation_rate
+        self.crossover_rate  = crossover_rate
+        self.elitism_count   = elitism_count
         self.max_generations = max_generations
-        self.time_limit = time_limit
+        self.time_limit      = time_limit
 
     def evolve(self, timetable):
 
@@ -29,12 +29,6 @@ class TimetableGA:
             chrom.calculate_fitness(timetable)
             population.append(chrom)
 
-        # 🔵 Canonical, fixed order of every scheduling "session".
-        # Every chromosome labels its genes with these same ids, so a
-        # crossover cut point always aligns the same logical lecture
-        # across both parents. A session is always swapped as one
-        # indivisible unit so shared-group subjects (same group_name)
-        # can never be split between different days/rooms by crossover.
         session_ids = timetable.session_id_sequence()
 
         for generation in range(self.max_generations):
@@ -55,11 +49,6 @@ class TimetableGA:
                 child = TimetableChromosome(timetable)
 
                 if len(session_ids) > 1 and random.random() < self.crossover_rate:
-                    # Session-aware crossover: take sessions 1…cp from p1,
-                    # sessions cp+1…end from p2. Cutting on session
-                    # boundaries guarantees every multi-slot block and every
-                    # member of a shared group always come from the same
-                    # parent — the child is internally consistent from birth.
                     cp = random.randint(1, len(session_ids) - 1)
                     left_ids  = set(session_ids[:cp])
                     right_ids = set(session_ids[cp:])
@@ -73,15 +62,12 @@ class TimetableGA:
                         p1.genes if p1.fitness >= p2.fitness else p2.genes
                     )
 
-                # carry over expected session counts so fitness can
-                # validate per-subject targets correctly
                 child.expected_blocks = getattr(
                     p1, "expected_blocks", getattr(p2, "expected_blocks", {})
                 )
 
                 self.mutate(child, timetable)
                 child.calculate_fitness(timetable)
-
                 new_population.append(child)
 
             population = new_population
@@ -90,13 +76,6 @@ class TimetableGA:
         return population[0]
 
     def mutate(self, chromosome, timetable):
-
-        # 🔵 Mutate a whole "session" (one block) at a time instead of
-        # one timeslot-gene at a time.  This keeps:
-        #   - a 2-hour double block contiguous (both timeslots move together)
-        #   - a shared group (subjects with the same group_name) always on
-        #     the same day/room/timeslots because every gene in the group
-        #     carries the same session_id and is moved as one atomic unit.
 
         sessions = defaultdict(list)
         for gene in chromosome.genes:
@@ -127,22 +106,28 @@ class TimetableGA:
             if not subj_list:
                 continue
 
-            levels = set()
+            levels  = set()
             for s in subj_list:
                 course = timetable.course_map.get(s["course_id"], {})
                 levels.add(course.get("course_level", "").lower())
 
-            nta = subj_list[0].get("nta_level")
-            is_nta4 = timetable.is_nta4(nta)
+            nta      = subj_list[0].get("nta_level")
+            is_nta4  = timetable.is_nta4(nta)
+            is_degree = "degree" in levels and not is_nta4
+            is_shared = helper._is_shared_group(subj_list)
 
-            # Diploma and nta-4 stay off weekends; degree can use weekends
-            # (8:00–16:00 per FIX 3).
+            # 🔵 DIPLOMA-IN-LARGE-ROOM during mutation
+            is_diploma_large_room = (
+                not is_degree
+                and "diploma" in levels
+                and not is_nta4
+                and (helper._group_uses_large_room(subj_list) or
+                     (("diploma" in levels) and is_shared))
+            )
+
             weekend_blocked = is_nta4 or ("diploma" in levels)
 
-            # 🔵 FIX 5 — teacher weekly-day cap during mutation: figure
-            # out which days each involved teacher is already using
-            # (from every OTHER session in this chromosome), so we
-            # don't push a teacher past MAX_TEACHER_DAYS distinct days.
+            # Teacher-day cap bookkeeping
             session_gene_ids = {id(g) for g in genes}
             current_teacher_days = defaultdict(set)
             for g in chromosome.genes:
@@ -162,7 +147,7 @@ class TimetableGA:
             candidate_days = list(range(len(timetable.days)))
             random.shuffle(candidate_days)
 
-            new_day = None
+            new_day   = None
             new_slots = None
 
             for enforce_teacher_cap in (True, False):
@@ -183,8 +168,12 @@ class TimetableGA:
                         for level in levels:
                             if not helper.allowed_time(level, nta, day_name, hour):
                                 ok = False; break
-                        if ok:
-                            valid_slots.append(idx)
+                        if not ok:
+                            continue
+                        # 🔵 Diploma-in-large-room: must start before 14:00
+                        if is_diploma_large_room and hour >= 14:
+                            continue
+                        valid_slots.append(idx)
 
                     valid_slots.sort()
 
@@ -194,7 +183,12 @@ class TimetableGA:
                         slots = valid_slots[i:i + block]
                         if slots[-1] != slots[0] + (block - 1):
                             continue
-                        new_day = day_id
+                        # Diploma-in-large-room end-check
+                        if is_diploma_large_room:
+                            last_hour = timetable.timeslot_start_hours[slots[-1]]
+                            if last_hour >= 14:
+                                continue
+                        new_day   = day_id
                         new_slots = slots
                         break
 
@@ -204,16 +198,24 @@ class TimetableGA:
                     break
 
             if not new_slots:
-                # no valid time window found — leave this session as-is
                 continue
 
-            # 🔵 FIX 4 — pick the new room using the same student-count
-            # / capacity-aware candidate list used during generation,
-            # instead of a fully random room. Falls back to a fully
-            # random room only if no candidate is available at all.
+            # Room selection: honours degree-large-room and student-count rules
             candidate_rooms = helper._group_candidate_rooms(subj_list)
             if candidate_rooms:
-                chosen_room = random.choice(candidate_rooms)
+                # Degree: preserve capacity-desc order for student priority
+                if is_degree:
+                    by_cap = defaultdict(list)
+                    for r in candidate_rooms:
+                        by_cap[(r.get("capacity") or 0)].append(r)
+                    ordered_rooms = []
+                    for cap in sorted(by_cap.keys(), reverse=True):
+                        grp = by_cap[cap]; random.shuffle(grp)
+                        ordered_rooms.extend(grp)
+                    chosen_room = ordered_rooms[0]
+                else:
+                    chosen_room = random.choice(candidate_rooms)
+
                 new_room_idx = next(
                     (ri for ri, r in enumerate(timetable.rooms)
                      if r["id"] == chosen_room["id"]),
@@ -229,6 +231,6 @@ class TimetableGA:
             for sid, glist in genes_by_subject.items():
                 glist.sort(key=lambda g: g["timeslot_id"])
                 for g, new_ts in zip(glist, ordered_new_slots):
-                    g["day_id"] = new_day
+                    g["day_id"]      = new_day
                     g["timeslot_id"] = new_ts
-                    g["room_id"] = new_room_idx
+                    g["room_id"]     = new_room_idx

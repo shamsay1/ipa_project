@@ -373,53 +373,26 @@ Email
 </button>
 @endif
 
-<div class="modal fade" id="emailModal" tabindex="-1">
-<div class="modal-dialog">
-<div class="modal-content">
+{{-- =========================================== --}}
+{{-- NEW: SHIFT BUTTON                            --}}
+{{-- Inafungua modal ya kubadilishana vipindi kati--}}
+{{-- ya mwalimu huyu na mwalimu wa pili            --}}
+{{-- =========================================== --}}
+<button
+type="button"
+class="btn btn-sm btn-warning mt-1"
+onclick="openShiftModal(this)"
 
-<div class="modal-header bg-primary text-white">
-<h5 class="modal-title">Send Email</h5>
-<button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-</div>
-
-<form action="{{ route('send.email') }}" method="POST">
-@csrf
-
-<div class="modal-body">
-
-<p><strong>Subject:</strong> <span id="modalSubject"></span></p>
-<p><strong>Code:</strong> <span id="modalSubjectCode"></span></p>
-<p><strong>Teacher:</strong> <span id="modalTeacher"></span></p>
-<p><strong>CR:</strong> <span id="modalCR"></span></p>
-
-{{-- HIDDEN INPUTS --}}
-<input type="hidden" name="subject" id="form_subject">
-<input type="hidden" name="subject_code" id="form_subject_code">
-<input type="hidden" name="teacher_email" id="form_teacher_email">
-<input type="hidden" name="cr_email" id="form_cr_email">
-
-<div class="mb-2">
-{{-- <label>Email Message</label>
-<textarea name="message" id="form_message" class="form-control" rows="4">
-Timetable for this subject has been changed. Please review the updated schedule.
-</textarea> --}}
-</div>
-
-</div>
-
-<div class="modal-footer">
-<button type="submit" class="btn btn-primary">
-Send Email
+data-timetable-id="{{ $entry->timetable_id }}"
+data-teacher-id="{{ $entry->teacher_id ?? '' }}"
+data-subject="{{ $entry->subjectName }}"
+data-teacher="{{ $entry->firstname }} {{ $entry->middlename }} {{ $entry->lastname }}"
+data-day="{{ $dayName }}"
+data-time="{{ $start->format('H:i') }} - {{ $start->copy()->addHour()->format('H:i') }}"
+data-room="{{ $entry->room_name }}"
+>
+<i class="bi bi-arrow-left-right"></i> Shift
 </button>
-</div>
-
-</form>
-
-</div>
-</div>
-</div>
-
-
 
 </td>
 
@@ -470,6 +443,207 @@ Send Email
             </div>
 
             @endforeach
+
+
+{{-- =========================================================== --}}
+{{-- NEW: SHIFT MODAL (MOJA TU KWENYE UKURASA MZIMA)              --}}
+{{-- SEHEMU MBILI: kushoto - Mwalimu wa Kwanza (uliyembonyeza),  --}}
+{{-- kulia - Mwalimu wa Pili (unayemchagua + vipindi vyake).      --}}
+{{-- =========================================================== --}}
+
+@php
+    // Fallback: kama controller haijapitisha $teachers kwenye view,
+    // tunaipata moja kwa moja hapa (haitavunja ukurasa).
+    $teachers = $teachers ?? \DB::table('teachers')
+        ->where('branch_id', auth()->user()->branch_id)
+        ->orderBy('firstname')
+        ->get();
+@endphp
+
+<div class="modal fade" id="shiftModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+
+      <div class="modal-header bg-warning">
+        <h5 class="modal-title">Badilishana Vipindi Kati ya Walimu Wawili</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+
+        <div class="row">
+
+          {{-- SEHEMU 1: MWALIMU WA KWANZA --}}
+          <div class="col-md-6 mb-3">
+            <h6 class="text-primary">Mwalimu wa Kwanza</h6>
+            <div class="alert alert-secondary" id="shiftCurrentInfo"></div>
+          </div>
+
+          {{-- SEHEMU 2: MWALIMU WA PILI --}}
+          <div class="col-md-6 mb-3">
+            <h6 class="text-success">Mwalimu wa Pili</h6>
+
+            <div class="mb-2">
+              <label class="form-label">Chagua Mwalimu</label>
+              <select id="secondTeacherSelect" class="form-select" onchange="loadTeacherPeriods()">
+                <option value="">-- Chagua Mwalimu --</option>
+                @foreach($teachers as $t)
+                  <option value="{{ $t->id }}">
+                    {{ $t->firstname }} {{ $t->middlename }} {{ $t->lastname }}
+                  </option>
+                @endforeach
+              </select>
+            </div>
+
+            <div class="mb-2">
+              <label class="form-label">Chagua Kipindi cha Mwalimu Huyo</label>
+              <select id="secondPeriodSelect" class="form-select">
+                <option value="">-- Chagua mwalimu kwanza --</option>
+              </select>
+            </div>
+          </div>
+
+        </div>
+
+        <hr>
+        <div id="shiftAlertBox"></div>
+
+        <input type="hidden" id="shiftTimetableId">
+
+        <small class="text-muted">
+          Mfumo utaangalia chumba, mwalimu, na darasa/kundi kabla ya kubadilishana,
+          ili kuepuka migongano kwa pande zote mbili.
+        </small>
+
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Funga</button>
+        <button type="button" class="btn btn-warning" onclick="confirmShift()">Badilishana</button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+/**
+ * Inafunguliwa wakati button ya "Shift" ya kipindi fulani inabonyezwa.
+ * Inajaza taarifa za Mwalimu wa Kwanza (sehemu ya kushoto), na
+ * inazima chaguo la kumchagua mwalimu huyu mwenyewe kwenye dropdown
+ * ya Mwalimu wa Pili (asijibadilishe na yeye mwenyewe).
+ */
+function openShiftModal(btn) {
+    document.getElementById('shiftTimetableId').value = btn.dataset.timetableId;
+
+    document.getElementById('shiftCurrentInfo').innerHTML =
+        `<strong>${btn.dataset.subject}</strong><br>` +
+        `${btn.dataset.teacher}<br>` +
+        `${btn.dataset.day} | ${btn.dataset.time} | Chumba: ${btn.dataset.room}`;
+
+    document.getElementById('shiftAlertBox').innerHTML = '';
+
+    const teacherSelect = document.getElementById('secondTeacherSelect');
+    teacherSelect.value = '';
+    Array.from(teacherSelect.options).forEach(opt => {
+        opt.disabled = (opt.value !== '' && opt.value === btn.dataset.teacherId);
+    });
+
+    document.getElementById('secondPeriodSelect').innerHTML =
+        '<option value="">-- Chagua mwalimu kwanza --</option>';
+
+    new bootstrap.Modal(document.getElementById('shiftModal')).show();
+}
+
+/**
+ * Mwalimu wa Pili akichaguliwa kwenye dropdown - inapakia (AJAX)
+ * orodha ya vipindi vyake vyote ili mtumiaji achague kipi
+ * cha kubadilishana nacho.
+ */
+function loadTeacherPeriods() {
+    const teacherId = document.getElementById('secondTeacherSelect').value;
+    const periodSelect = document.getElementById('secondPeriodSelect');
+    const currentId = document.getElementById('shiftTimetableId').value;
+
+    if (!teacherId) {
+        periodSelect.innerHTML = '<option value="">-- Chagua mwalimu kwanza --</option>';
+        return;
+    }
+
+    periodSelect.innerHTML = '<option value="">Inapakia...</option>';
+
+    fetch(`{{ route('timetable.teacher.periods') }}?teacher_id=${teacherId}&exclude_id=${currentId}`)
+        .then(res => res.json())
+        .then(data => {
+            if (!data.entries || data.entries.length === 0) {
+                periodSelect.innerHTML = '<option value="">Mwalimu huyu hana vipindi vingine</option>';
+                return;
+            }
+
+            periodSelect.innerHTML = '<option value="">-- Chagua kipindi --</option>';
+
+            data.entries.forEach(e => {
+                const opt = document.createElement('option');
+                opt.value = e.id;
+                opt.textContent = `${e.day_name} | ${e.start_time}-${e.end_time} | ${e.room_name} | ${e.subject_name}`;
+                periodSelect.appendChild(opt);
+            });
+        })
+        .catch(() => {
+            periodSelect.innerHTML = '<option value="">Imeshindwa kupakia vipindi</option>';
+        });
+}
+
+/**
+ * Inatuma ombi la kubadilishana (swap) kati ya kipindi cha Mwalimu wa
+ * Kwanza na kipindi kilichochaguliwa cha Mwalimu wa Pili. Server
+ * itaangalia migongano kabla ya kufanya mabadiliko.
+ */
+function confirmShift() {
+    const targetId = document.getElementById('secondPeriodSelect').value;
+    const alertBox = document.getElementById('shiftAlertBox');
+
+    if (!targetId) {
+        alertBox.innerHTML = '<div class="alert alert-warning">Tafadhali chagua mwalimu wa pili na kipindi chake.</div>';
+        return;
+    }
+
+    alertBox.innerHTML = '<div class="alert alert-info">Inakagua migongano, tafadhali subiri...</div>';
+
+    fetch(`{{ route('timetable.swap') }}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+        },
+        body: JSON.stringify({
+            timetable_id_1: document.getElementById('shiftTimetableId').value,
+            timetable_id_2: targetId
+        })
+    })
+    .then(res => res.json().then(data => ({ status: res.status, body: data })))
+    .then(({ status, body }) => {
+        if (status === 200 && body.success) {
+            alertBox.innerHTML = '<div class="alert alert-success">' + body.message + '</div>';
+            setTimeout(() => location.reload(), 1200);
+        } else {
+            let errHtml = '<div class="alert alert-danger"><strong>' +
+                (body.message || 'Imeshindikana kubadilishana.') + '</strong>';
+
+            if (body.errors && body.errors.length) {
+                errHtml += '<ul class="mb-0 mt-2">';
+                body.errors.forEach(e => errHtml += `<li>${e}</li>`);
+                errHtml += '</ul>';
+            }
+            errHtml += '</div>';
+            alertBox.innerHTML = errHtml;
+        }
+    })
+    .catch(() => {
+        alertBox.innerHTML = '<div class="alert alert-danger">Hitilafu ya mtandao/server imetokea.</div>';
+    });
+}
+</script>
 
                         
 

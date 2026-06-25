@@ -17,6 +17,84 @@
         display: flex;
         flex-direction: column;
     }
+    .btn1{
+        background-color: rgb(41, 190, 103);
+        padding: 5px;
+        margin: 10px 10px 10px 10px;
+        color: white;
+        border-radius: 4px;
+        border: none;
+        
+         
+    }
+    .password-card {
+    max-width: 500px;
+    margin: 30px auto;
+    background: #ffffff;
+    padding: 35px;
+    border-radius: 12px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+    transition: 0.3s ease;
+}
+
+/* Title */
+.password-card h4 {
+    font-weight: 600;
+    color: #0f2a44;
+    letter-spacing: 0.5px;
+}
+
+/* Labels */
+.password-card .form-label {
+    font-weight: 500;
+    color: #495057;
+}
+
+/* Input Fields */
+.password-card .form-control {
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-bottom: 5px; 
+    border: 1px solid #ced4da;
+    transition: all 0.2s ease;
+}
+
+/* Focus Effect */
+.password-card .form-control:focus {
+    border-color: #0f2a44;
+    box-shadow: 0 0 0 0.2rem rgba(15, 42, 68, 0.15);
+}
+
+/* Error State */
+.password-card .is-invalid {
+    border-color: #dc3545;
+}
+
+/* Button */
+.password-card .btn-primary {
+    background-color: #0f2a44;
+    border: none;
+    padding: 10px;
+    color: white;
+    font-weight: 600;
+    border-radius: 8px;
+    transition: 0.3s ease;
+}
+
+/* Button Hover */
+.password-card .btn-primary:hover {
+    background-color: #163a5c;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(15, 42, 68, 0.2);
+}
+
+/* Responsive */
+@media (max-width: 576px) {
+    .password-card {
+        margin: 20px;
+        padding: 25px;
+    }
+}
 
     .page-content {
         flex: 1;
@@ -210,54 +288,79 @@
                 <img src="<?php echo e(asset('images/ipalogo1.png')); ?>" alt="" width="120">
             </div>
      <h3 style="text-align: center;margin-top: 10px">INSTITUTE OF PUBLIC AND ADMINISTRATION</h3>
-                <h5 style="text-align: center">TEACHER SUBJECT: <b><?php echo e(Auth::user()->firstname); ?> <?php echo e(Auth::user()->middlename); ?> <?php echo e(Auth::user()->lastname); ?></b></h5><br>
+                <h5 style="text-align: center">TEACHER'S Full name: <b><?php echo e(Auth::user()->firstname); ?> <?php echo e(Auth::user()->middlename); ?> <?php echo e(Auth::user()->lastname); ?></b></h5><br>
               <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead>
-                        <tr style="background-color: #0f2a44">
-                            <th colspan="100" style="text-align: center;font-weight: bold;color: white">My subjects Information</th>
-                        </tr>
-                        <tr>
-                            <th>T/N</th>
-                            <th>Name</th>
-                            <th>Code</th>
-                            <th>Course</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php
-                            $i = 1;
-                        ?>
-                       
-                        <?php $__currentLoopData = $subjects; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $i => $subject): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-<tr>
-    <td><?php echo e($i + 1); ?></td>
+                <div class="text-end mt-3 nodis">
+   
+</div>
+                <div class="row g-4 justify-content-center">
+    <div class="col-md-6">
+        <div class="password-card">
+            <h4 style="text-align: center">Changing password form</h4>
 
-    
-    <td>
-        <?php echo e($subject['subjectName']); ?>
+            <form action="<?php echo e(route('profile.changePassword')); ?>" method="POST">
+                <?php echo csrf_field(); ?>
 
+                
+                <div class="mb-3">
+                    <label for="current_password" class="form-label">Current password</label>
+                    <input type="password" name="current_password" id="current_password" class="form-control <?php $__errorArgs = ['current_password'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?> is-invalid <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>" required>
+                    <?php $__errorArgs = ['current_password'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?>
+                        <div class="invalid-feedback"><?php echo e($message); ?></div>
+                    <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
+                </div>
 
-        <?php if(count($subject['courses']) > 1): ?>
-            <span style="color: green;font-weight: bolder">(Joined)</span>
-        <?php endif; ?>
-    </td>
+                
+                <div class="mb-3">
+                    <label for="new_password" class="form-label">New password</label>
+                    <input type="password" name="new_password" id="new_password" class="form-control <?php $__errorArgs = ['new_password'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?> is-invalid <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>" required>
+                    <?php $__errorArgs = ['new_password'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?>
+                        <div class="invalid-feedback"><?php echo e($message); ?></div>
+                    <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
+                </div>
 
-    
-    <td><?php echo e($subject['subjectCode']); ?></td>
+                
+                <div class="mb-4">
+                    <label for="new_password_confirmation" class="form-label">Confirm password</label>
+                    <input type="password" name="confirm_password" id="new_password_confirmation" class="form-control" required>
+                </div>
 
-    
-    <td>
-        <?php echo e(implode(' + ', $subject['courses'])); ?>
-
-    </td>
-</tr>
-<?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-
-                     
-                        
-                    </tbody>
-                </table>
+                <div class="d-grid">
+                    <button type="submit" class="btn btn-primary">Save changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+                
             </div>
 
             </div>
@@ -276,6 +379,27 @@
     
     </div>
 
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<?php if(session('success')): ?>
+<script>
+Swal.fire({
+    icon: 'success',
+    title: 'Success!',
+    text: '<?php echo e(session('success')); ?>',
+    confirmButtonText: 'OK'
+});
+</script>
+
+<?php endif; ?>
+<?php if(session('error')): ?>
+<script>
+Swal.fire({
+    icon: 'error',
+    title: 'Error!',
+    text: '<?php echo e(session('error')); ?>',
+    confirmButtonText: 'OK'
+});
+</script>
+<?php endif; ?>
 </body>
-</html>
-<?php /**PATH C:\Users\PC\Documents\Timetable\resources\views/teachersubject.blade.php ENDPATH**/ ?>
+</html><?php /**PATH C:\Users\PC\Documents\Timetable\resources\views/profile.blade.php ENDPATH**/ ?>

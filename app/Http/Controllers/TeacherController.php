@@ -82,6 +82,25 @@ public function TeacherImport(Request $request)
     return back()->with('success', 'Teachers imported successfully!');
 }
 
+    public function attendance()
+{
+    $absent_lesson = TeacherAttendance::with('subject')
+        ->where('status', 'emergency')
+        ->where('teacher_id', Auth::guard('teacher')->user()->id)
+        ->get();
+
+    foreach ($absent_lesson as $lesson) {
+        $daysUsed = Carbon::parse($lesson->created_at)
+            ->diffInDays(now());
+
+        $remaining = 6 - $daysUsed;
+
+        $lesson->remaining_days = $remaining > 0 ? (int) $remaining : 0;
+    }
+
+    return view('viewattendance', compact('absent_lesson'));
+}
+
 
     public function index(Request $request)
 {
@@ -695,16 +714,20 @@ public function TeacherImport(Request $request)
     $request->validate([
         'current_password' => 'required',
         'new_password' => 'required|min:4',
-        'confirm_password' => 'required|same:new_password',
+        'confirm_password' => 'required',
     ]);
 
-    $user = Teacher::find(Auth::id()); // ✅ badala ya Auth::user()
+    $user = Teacher::find(Auth::guard("teacher")->user()->id); 
     if (!$user) {
-        return back()->withErrors(['error' => 'Teacher not found']);
+        return back()->with('error','Teacher not found');
     }
 
     if (!Hash::check($request->current_password, $user->password)) {
-        return back()->withErrors(['current_password' => 'Current password is incorrect']);
+        return back()->with('error', 'Current password is incorrect');
+    }
+    if($request->new_password != $request->confirm_password){
+        return back()->with('error', 'Password does not matched!');
+        
     }
 
     $user->update([

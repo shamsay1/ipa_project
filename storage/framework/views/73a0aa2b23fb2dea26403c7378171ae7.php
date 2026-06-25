@@ -182,7 +182,6 @@
         <li><a href="<?php echo e(url('/profile')); ?>">Profile</a></li>
         <li><a href="<?php echo e(url('/attendance')); ?>">Emergency less</a></li>
 
-
         
         <li class="ms-auto">
             <form method="POST" action="<?php echo e(route('logout')); ?>" class="mb-0">
@@ -218,39 +217,29 @@
                             <th colspan="100" style="text-align: center;font-weight: bold;color: white">My subjects Information</th>
                         </tr>
                         <tr>
-                            <th>T/N</th>
-                            <th>Name</th>
-                            <th>Code</th>
-                            <th>Course</th>
+                            
+                            <th>Subject Name</th>
+                            <th>Subject Code</th>
+                            <th>Days remaining</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <?php
-                            $i = 1;
-                        ?>
+                      
                        
-                        <?php $__currentLoopData = $subjects; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $i => $subject): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                        <?php $__currentLoopData = $absent_lesson; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $abs): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
 <tr>
-    <td><?php echo e($i + 1); ?></td>
-
+  
     
     <td>
-        <?php echo e($subject['subjectName']); ?>
+        <?php echo e($abs->subject->subjectName); ?>
 
-
-        <?php if(count($subject['courses']) > 1): ?>
-            <span style="color: green;font-weight: bolder">(Joined)</span>
-        <?php endif; ?>
     </td>
 
     
-    <td><?php echo e($subject['subjectCode']); ?></td>
-
-    
+    <td><?php echo e($abs->subject->subjectCode); ?></td>
     <td>
-        <?php echo e(implode(' + ', $subject['courses'])); ?>
-
-    </td>
+    <span style="color: red;font-weight: bold"><?php echo e($abs->remaining_days); ?> Days Remaining</span>
+</td>
 </tr>
 <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
 
@@ -278,4 +267,4 @@
 
 </body>
 </html>
-<?php /**PATH C:\Users\PC\Documents\Timetable\resources\views/teachersubject.blade.php ENDPATH**/ ?>
+<?php /**PATH C:\Users\PC\Documents\Timetable\resources\views/viewattendance.blade.php ENDPATH**/ ?>

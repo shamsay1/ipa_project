@@ -180,6 +180,8 @@
         <li><a href="{{ url('/teachersub') }}">Subjects</a></li>
         <li><a href="{{ url('/teachettbl') }}">Timetable</a></li>
         <li><a href="{{ url('/profile') }}">Profile</a></li>
+        <li><a href="{{ url('/attendance') }}">Emergency less</a></li>
+
 
         {{-- Logout for teacher --}}
         <li class="ms-auto">

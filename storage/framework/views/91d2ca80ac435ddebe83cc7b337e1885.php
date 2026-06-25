@@ -151,6 +151,8 @@
         <li><a href="<?php echo e(url('/teachersub')); ?>">Subjects</a></li>
         <li><a href="<?php echo e(url('/teachettbl')); ?>">Timetable</a></li>
         <li><a href="<?php echo e(url('/profile')); ?>">Profile</a></li>
+        <li><a href="<?php echo e(url('/attendance')); ?>">Emergency less</a></li>
+
 
         
         <li class="ms-auto">

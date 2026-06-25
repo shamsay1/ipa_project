@@ -18,6 +18,7 @@ use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Hash;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use Maatwebsite\Excel\Validators\ValidationException;
 
@@ -60,25 +61,30 @@ class CrInfoController extends Controller
     ));
 }
 
-    public function update(Request $request,$id)
-        {
+    public function update(Request $request, $id)
+{
+    $cr = CrInfo::findOrFail($id);
 
-        $cr = CrInfo::findOrFail($id);
+    $data = [
+        'firstname'   => $request->firstname,
+        'middlename'  => $request->middlename,
+        'lastname'    => $request->lastname,
+        'mobile'      => $request->mobile,
+        'email'       => $request->email,
+        'semester_id' => $request->semester_id,
+        'course_id'   => $request->course_id,
+        'nta'         => $request->nta,
+    ];
 
-        $cr->update([
-        'firstname'=>$request->firstname,
-        'middlename'=>$request->middlename,
-        'lastname'=>$request->lastname,
-        'mobile'=>$request->mobile,
-        'email'=>$request->email,
-        "semester_id" => $request->semester_id,
-        'course_id'=>$request->course_id,
-        'nta'=>$request->nta
-        ]);
+    
+    if (!empty($request->password)) {
+        $data['password'] = Hash::make($request->password);
+    }
 
-        return back()->with('success','Updated Successfully');
+    $cr->update($data);
 
-        }
+    return back()->with('success', 'Updated Successfully');
+}
   
 
     public function store(Request $request)
@@ -495,6 +501,40 @@ class CrInfoController extends Controller
     ]);
 
     return back()->with('success', 'Students imported successfully!');
+}
+
+
+        public function profile(){
+            return view("profilestudent");
+        }
+
+
+        public function changePassword(Request $request)
+{
+    $request->validate([
+        'current_password' => 'required',
+        'new_password' => 'required|min:4',
+        'confirm_password' => 'required',
+    ]);
+
+    $user = CrInfo::find(Auth::guard("cr")->user()->id); 
+    if (!$user) {
+        return back()->with('error','Teacher not found');
+    }
+
+    if (!Hash::check($request->current_password, $user->password)) {
+        return back()->with('error', 'Current password is incorrect');
+    }
+    if($request->new_password != $request->confirm_password){
+        return back()->with('error', 'Password does not matched!');
+        
+    }
+
+    $user->update([
+        'password' => Hash::make($request->new_password),
+    ]);
+
+    return back()->with('success', 'Password changed successfully!');
 }
 
 
