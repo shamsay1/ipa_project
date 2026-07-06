@@ -90,6 +90,7 @@
             <th>Day of Week</th>
             <th>Time / Session</th>
             <th>Status</th>
+            <th>Action</th>
         </tr>
     </thead>
     <tbody>
@@ -136,6 +137,33 @@
                             </span>
                         @endif
                     </td>
+                    <td>
+
+    @if($attendance->status == 'present')
+
+        <button
+            class="btn btn-warning btn-sm"
+            data-bs-toggle="modal"
+            data-bs-target="#attendanceModal"
+            data-id="{{ $attendance->id }}"
+            data-status="absent">
+            Mark Absent
+        </button>
+
+    @else
+
+        <button
+            class="btn btn-success btn-sm"
+            data-bs-toggle="modal"
+            data-bs-target="#attendanceModal"
+            data-id="{{ $attendance->id }}"
+            data-status="present">
+            Mark Present
+        </button>
+
+    @endif
+
+</td>
                 </tr>
             @endforeach
         @empty
@@ -152,4 +180,100 @@
 
     </div>
 </div>
+<div class="modal fade" id="attendanceModal" tabindex="-1">
+
+    <div class="modal-dialog modal-dialog-centered">
+
+        <div class="modal-content">
+
+            <form method="POST" action="{{ route('attendance.update.status') }}">
+
+                @csrf
+
+                <div class="modal-header">
+
+                    <h5 class="modal-title">
+                        Confirm Attendance
+                    </h5>
+
+                    <button
+                        type="button"
+                        class="btn-close"
+                        data-bs-dismiss="modal">
+                    </button>
+
+                </div>
+
+                <div class="modal-body">
+
+                    <input
+                        type="hidden"
+                        name="attendance_id"
+                        id="attendance_id">
+
+                    <input
+                        type="hidden"
+                        name="status"
+                        id="attendance_status">
+
+                    <p class="mb-0">
+                        Are you sure you want to update this attendance status?
+                    </p>
+
+                </div>
+
+                <div class="modal-footer">
+
+                    <button
+                        type="button"
+                        class="btn btn-secondary"
+                        data-bs-dismiss="modal">
+                        Cancel
+                    </button>
+
+                    <button
+                        type="submit"
+                        class="btn btn-primary">
+                        Yes, Update
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</div>
+
+<script>
+
+const attendanceModal = document.getElementById('attendanceModal');
+
+attendanceModal.addEventListener('show.bs.modal', function (event) {
+
+    let button = event.relatedTarget;
+
+    document.getElementById('attendance_id').value =
+        button.getAttribute('data-id');
+
+    document.getElementById('attendance_status').value =
+        button.getAttribute('data-status');
+
+});
+
+</script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+@if(session('success'))
+<script>
+Swal.fire({
+    icon: 'success',
+    title: 'Success!',
+    text: '{{ session('success') }}',
+    confirmButtonText: 'OK'
+});
+</script>
+@endif
+
 @endsection

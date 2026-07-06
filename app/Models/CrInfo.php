@@ -22,6 +22,11 @@ class CrInfo extends Authenticatable
         'branch_id'
     ];
 
+     protected $hidden = [
+        'password',
+        'remember_token',
+    ];
+
     public function course()
     {
         return $this->belongsTo(Course::class);

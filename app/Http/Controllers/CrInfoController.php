@@ -65,27 +65,24 @@ class CrInfoController extends Controller
 {
     $cr = CrInfo::findOrFail($id);
 
-    $data = [
-        'firstname'   => $request->firstname,
-        'middlename'  => $request->middlename,
-        'lastname'    => $request->lastname,
-        'mobile'      => $request->mobile,
-        'email'       => $request->email,
-        'semester_id' => $request->semester_id,
-        'course_id'   => $request->course_id,
-        'nta'         => $request->nta,
-    ];
+    $cr->firstname   = $request->firstname;
+    $cr->middlename  = $request->middlename;
+    $cr->lastname    = $request->lastname;
+    $cr->mobile      = $request->mobile;
+    $cr->email       = $request->email;
+    $cr->semester_id = $request->semester_id;
+    $cr->course_id   = $request->course_id;
+    $cr->nta         = $request->nta;
 
-    
-    if (!empty($request->password)) {
-        $data['password'] = Hash::make($request->password);
+   
+    if ($request->filled('password')) {
+        $cr->password = $request->password;
     }
 
-    $cr->update($data);
+    $cr->save();
 
     return back()->with('success', 'Updated Successfully');
 }
-  
 
     public function store(Request $request)
     {
@@ -185,25 +182,37 @@ class CrInfoController extends Controller
     | Tengeneza attendance records kama hazipo
     |--------------------------------------------------------------------------
     */
-    foreach ($timetables as $tt) {
+    $stoppedTeachers = DB::table('teacher_leaves')
+    ->where('status', 'stop')
+    ->pluck('teacher_id')
+    ->toArray();
 
-        if (empty($tt->teacher_id)) {
-            continue;
-        }
+foreach ($timetables as $tt) {
 
-        TeacherAttendance::firstOrCreate(
-            [
-                'timetable_id' => $tt->timetable_id,
-                'date' => $todayDate,
-            ],
-            [
-                'teacher_id' => $tt->teacher_id,
-                'subject_id' => $tt->subject_id,
-                'branch_id' => $user->branch_id,
-                'status' => 'absent'
-            ]
-        );
+    // Kama timetable haina mwalimu
+    if (empty($tt->teacher_id)) {
+        continue;
     }
+
+    // Kama mwalimu yupo kwenye leave (status = stop)
+    // usiunde attendance kabisa
+    if (in_array($tt->teacher_id, $stoppedTeachers)) {
+        continue;
+    }
+
+    TeacherAttendance::firstOrCreate(
+        [
+            'timetable_id' => $tt->timetable_id,
+            'date'         => $todayDate,
+        ],
+        [
+            'teacher_id' => $tt->teacher_id,
+            'subject_id' => $tt->subject_id,
+            'branch_id'  => $user->branch_id,
+            'status'     => 'absent',
+        ]
+    );
+}
 
     /*
     |--------------------------------------------------------------------------
@@ -211,36 +220,50 @@ class CrInfoController extends Controller
     |--------------------------------------------------------------------------
     */
     $lessons = DB::table('teacher_attendances')
-        ->join('timetables', 'timetables.id', '=', 'teacher_attendances.timetable_id')
-        ->join('subjects', 'subjects.id', '=', 'timetables.subject_id')
-        ->join('timeslots', 'timeslots.id', '=', 'timetables.timeslot_id')
-        ->join('days', 'days.id', '=', 'timetables.day_id')
-        ->leftJoin('rooms', 'rooms.id', '=', 'timetables.room_id')
-        ->leftJoin('teachers', 'teachers.id', '=', 'teacher_attendances.teacher_id')
+    ->join('timetables', 'timetables.id', '=', 'teacher_attendances.timetable_id')
+    ->join('subjects', 'subjects.id', '=', 'timetables.subject_id')
+    ->join('timeslots', 'timeslots.id', '=', 'timetables.timeslot_id')
+    ->join('days', 'days.id', '=', 'timetables.day_id')
 
-        ->whereDate('teacher_attendances.date', $todayDate)
+    ->leftJoin('rooms', 'rooms.id', '=', 'timetables.room_id')
+    ->leftJoin('teachers', 'teachers.id', '=', 'teacher_attendances.teacher_id')
 
-        ->where('subjects.course_id', $user->course_id)
-        ->where('subjects.nta_level', $user->nta)
-        ->where('subjects.semester_id', $user->semester_id)
-        ->where('subjects.branch_id', $user->branch_id)
+    ->leftJoin('teacher_leaves', function ($join) {
+        $join->on('teacher_attendances.teacher_id', '=', 'teacher_leaves.teacher_id')
+             ->where('teacher_leaves.status', '=', 'stop');
+    })
 
-        ->orderBy('timeslots.start_time')
+    ->whereDate('teacher_attendances.date', $todayDate)
 
-        ->select(
-            'timetables.id as timetable_id',
-            'days.day_name',
-            'timeslots.start_time',
-            'timeslots.end_time',
-            'subjects.subjectName',
-            'subjects.subjectCode',
-            'rooms.name as room_name',
-            'teacher_attendances.status',
-            'teachers.firstname',
-            'teachers.middlename',
-            'teachers.lastname'
-        )
-        ->get();
+    ->where('subjects.course_id', $user->course_id)
+    ->where('subjects.nta_level', $user->nta)
+    ->where('subjects.semester_id', $user->semester_id)
+    ->where('subjects.branch_id', $user->branch_id)
+
+    ->orderBy('timeslots.start_time')
+
+    ->select(
+        'timetables.id as timetable_id',
+        'days.day_name',
+        'timeslots.start_time',
+        'timeslots.end_time',
+
+        'subjects.subjectName',
+        'subjects.subjectCode',
+
+        'rooms.name as room_name',
+
+        'teacher_attendances.status',
+
+        'teachers.firstname',
+        'teachers.middlename',
+        'teachers.lastname',
+
+        'teacher_leaves.status as leave_status',
+        'teacher_leaves.reason'
+    )
+
+    ->get();
 
     /*
     |--------------------------------------------------------------------------
@@ -531,7 +554,7 @@ class CrInfoController extends Controller
     }
 
     $user->update([
-        'password' => Hash::make($request->new_password),
+        'password' => $request->new_password,
     ]);
 
     return back()->with('success', 'Password changed successfully!');

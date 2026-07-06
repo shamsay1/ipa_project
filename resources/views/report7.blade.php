@@ -193,7 +193,7 @@
             <th>Teacher' Name</th>
             <th>Total Taught</th>
             <th>Not Taught</th>
-            <th>Percentage</th>
+            <th>Percentage Taught</th>
             <th>View</th>
         </tr>
     </thead>

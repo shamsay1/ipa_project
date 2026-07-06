@@ -91,6 +91,7 @@
             <th>Day of Week</th>
             <th>Time / Session</th>
             <th>Status</th>
+            <th>Action</th>
         </tr>
     </thead>
     <tbody>
@@ -140,6 +141,33 @@
                             </span>
                         <?php endif; ?>
                     </td>
+                    <td>
+
+    <?php if($attendance->status == 'present'): ?>
+
+        <button
+            class="btn btn-warning btn-sm"
+            data-bs-toggle="modal"
+            data-bs-target="#attendanceModal"
+            data-id="<?php echo e($attendance->id); ?>"
+            data-status="absent">
+            Mark Absent
+        </button>
+
+    <?php else: ?>
+
+        <button
+            class="btn btn-success btn-sm"
+            data-bs-toggle="modal"
+            data-bs-target="#attendanceModal"
+            data-id="<?php echo e($attendance->id); ?>"
+            data-status="present">
+            Mark Present
+        </button>
+
+    <?php endif; ?>
+
+</td>
                 </tr>
             <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
         <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
@@ -156,5 +184,101 @@
 
     </div>
 </div>
+<div class="modal fade" id="attendanceModal" tabindex="-1">
+
+    <div class="modal-dialog modal-dialog-centered">
+
+        <div class="modal-content">
+
+            <form method="POST" action="<?php echo e(route('attendance.update.status')); ?>">
+
+                <?php echo csrf_field(); ?>
+
+                <div class="modal-header">
+
+                    <h5 class="modal-title">
+                        Confirm Attendance
+                    </h5>
+
+                    <button
+                        type="button"
+                        class="btn-close"
+                        data-bs-dismiss="modal">
+                    </button>
+
+                </div>
+
+                <div class="modal-body">
+
+                    <input
+                        type="hidden"
+                        name="attendance_id"
+                        id="attendance_id">
+
+                    <input
+                        type="hidden"
+                        name="status"
+                        id="attendance_status">
+
+                    <p class="mb-0">
+                        Are you sure you want to update this attendance status?
+                    </p>
+
+                </div>
+
+                <div class="modal-footer">
+
+                    <button
+                        type="button"
+                        class="btn btn-secondary"
+                        data-bs-dismiss="modal">
+                        Cancel
+                    </button>
+
+                    <button
+                        type="submit"
+                        class="btn btn-primary">
+                        Yes, Update
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</div>
+
+<script>
+
+const attendanceModal = document.getElementById('attendanceModal');
+
+attendanceModal.addEventListener('show.bs.modal', function (event) {
+
+    let button = event.relatedTarget;
+
+    document.getElementById('attendance_id').value =
+        button.getAttribute('data-id');
+
+    document.getElementById('attendance_status').value =
+        button.getAttribute('data-status');
+
+});
+
+</script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<?php if(session('success')): ?>
+<script>
+Swal.fire({
+    icon: 'success',
+    title: 'Success!',
+    text: '<?php echo e(session('success')); ?>',
+    confirmButtonText: 'OK'
+});
+</script>
+<?php endif; ?>
+
 <?php $__env->stopSection(); ?>
 <?php echo $__env->make("layout.app", array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH C:\Users\PC\Documents\Timetable\resources\views/details.blade.php ENDPATH**/ ?>

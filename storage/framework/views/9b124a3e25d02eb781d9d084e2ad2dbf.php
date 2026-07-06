@@ -238,6 +238,30 @@ Sync Shared Subjects
         </div>
     </div>
 </div>
+<button type="button" id="btnSolveRemaining" class="btn btn-warning">
+    <i class="fa fa-wrench"></i> Suluhisha Yaliyobaki
+</button>
+
+<div class="modal fade" id="solveReportModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Ripoti ya Marekebisho</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p id="solveReportMessage"></p>
+        <div id="solveReportDetails"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Funga</button>
+        <button type="button" id="btnConfirmApply" class="btn btn-success" style="display:none;">
+            Thibitisha na Hifadhi
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
    <button><a href="<?php echo e(url('/export-teachers-subjects')); ?>" class="btn btn-success">
     Download Word
 </a></button>
@@ -289,7 +313,62 @@ Sync Shared Subjects
         </div>
     </div>
   
+<script>
+document.getElementById('btnSolveRemaining').addEventListener('click', function () {
+    runSolve(true); // dry run kwanza
+});
 
+document.getElementById('btnConfirmApply').addEventListener('click', function () {
+    runSolve(false); // andika DB
+});
+
+function runSolve(dryRun) {
+    const btn = document.getElementById('btnSolveRemaining');
+    btn.disabled = true;
+    const originalText = btn.innerHTML;
+    btn.innerHTML = 'Inatafuta suluhisho...';
+
+    fetch("<?php echo e(route('timetable.solveRemaining')); ?>", {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+        },
+        body: JSON.stringify({ dry_run: dryRun })
+    })
+    .then(res => res.json())
+    .then(data => {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+
+        if (!data.success) {
+            alert(data.message || 'Hitilafu imetokea');
+            return;
+        }
+
+        document.getElementById('solveReportMessage').innerText = data.message;
+
+        let html = '';
+        if (data.unresolved_count > 0) {
+            html += '<p class="text-danger">Vipindi ' + data.unresolved_count +
+                    ' havikuweza kutatuliwa kiotomatiki - vinahitaji ukaguzi wa mkono.</p>';
+        }
+        document.getElementById('solveReportDetails').innerHTML = html;
+        document.getElementById('btnConfirmApply').style.display = dryRun ? 'inline-block' : 'none';
+
+        new bootstrap.Modal(document.getElementById('solveReportModal')).show();
+
+        if (!dryRun && data.applied) {
+            setTimeout(() => location.reload(), 1200);
+        }
+    })
+    .catch(err => {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+        alert('Hitilafu ya mtandao: ' + err);
+    });
+}
+</script>
 <script>
 document.getElementById('subjectSelect').addEventListener('change', function () {
 

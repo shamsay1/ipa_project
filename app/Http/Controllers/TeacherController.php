@@ -15,6 +15,7 @@ use App\Models\Subject;
 use App\Models\SystemTimetable;
 use App\Models\Teacher;
 use App\Models\TeacherAttendance;
+use App\Models\TeacherLeave;
 use App\Models\Timetable;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -27,6 +28,29 @@ use Maatwebsite\Excel\Validators\ValidationException;
 
 class TeacherController extends Controller
 {
+
+public function store2(Request $request)
+{
+    $request->validate([
+        'name' => 'required|string|max:255',
+        'date' => 'required|date|unique:holidays,date',
+    ]);
+
+    DB::transaction(function () use ($request) {
+
+        // Hifadhi Holiday
+        Holiday::create([
+            'name' => $request->name,
+            'date' => $request->date,
+        ]);
+
+        // Futa attendance zote za tarehe hiyo
+        TeacherAttendance::whereDate('date', $request->date)->delete();
+
+    });
+
+    return back()->with('success', 'Holiday added successfully and attendance records for that date have been removed.');
+}
 
 public function TeacherImport(Request $request)
 {
@@ -100,29 +124,65 @@ public function TeacherImport(Request $request)
 
     return view('viewattendance', compact('absent_lesson'));
 }
+public function updateTeacherException(Request $request)
+{
+    $request->validate([
+        'leave_id'=>'required',
+        'status'=>'required'
+    ]);
 
+    DB::table('teacher_leaves')
+        ->where('id',$request->leave_id)
+        ->update([
+            'status'=>$request->status,
+            'updated_at'=>now()
+        ]);
+
+    return back()->with('success','Teacher status updated successfully.');
+}
 
     public function index(Request $request)
 {
-    $teacher = Auth::user();
-    $query = Teacher::where('branch_id', $teacher->branch_id)->where("user_level","teacher");
+    $user = Auth::user();
+
+    $query = Teacher::leftJoin('teacher_leaves', function ($join) {
+            $join->on('teachers.id', '=', 'teacher_leaves.teacher_id')
+                 ->where('teacher_leaves.status', '=', 'Stop');
+        })
+        ->where('teachers.branch_id', $user->branch_id)
+        ->where('teachers.user_level', 'teacher')
+        ->select(
+            'teachers.*',
+            'teacher_leaves.id as leave_id',
+            'teacher_leaves.reason as leave_reason',
+            'teacher_leaves.start_date',
+            'teacher_leaves.end_date',
+            'teacher_leaves.status as leave_status'
+        );
 
     if ($request->has('search') && $request->search != '') {
+
         $search = $request->search;
-        $query->where(function($q) use ($search) {
-            $q->where('firstname', 'LIKE', "%$search%")
-              ->orWhere('lastname', 'LIKE', "%$search%")
-              ->orWhere('email', 'LIKE', "%$search%")
-              ->orWhere('mobile', 'LIKE', "%$search%")
-              ->orWhere('teacher_code', 'LIKE', "%$search%");
+
+        $query->where(function ($q) use ($search) {
+
+            $q->where('teachers.firstname', 'LIKE', "%{$search}%")
+              ->orWhere('teachers.lastname', 'LIKE', "%{$search}%")
+              ->orWhere('teachers.email', 'LIKE', "%{$search}%")
+              ->orWhere('teachers.mobile', 'LIKE', "%{$search}%")
+              ->orWhere('teachers.teacher_code', 'LIKE', "%{$search}%");
+
         });
     }
 
     $departments = Department::all();
+
     $teachers = $query->paginate(10)->withQueryString();
 
     if ($request->ajax()) {
+
         return view('partials.teacher_table', compact('teachers'))->render();
+
     }
 
     return view('teacher', compact('teachers', 'departments'));
@@ -825,26 +885,21 @@ foreach ($subjectsRaw as $item) {
     ]);
 }
 
-public function supervision()
+        public function supervision()
 {
     $todayDate = Carbon::today()->toDateString();
     $todayName = Carbon::now()->format('l');
+
     $teacher = Auth::user();
 
     $entries = DB::table('timetables')
 
         ->join('days', 'timetables.day_id', '=', 'days.id')
-
         ->join('subjects', 'timetables.subject_id', '=', 'subjects.id')
-
         ->join('courses', 'subjects.course_id', '=', 'courses.id')
-
         ->join('teachers', 'subjects.teacher_id', '=', 'teachers.id')
-
         ->join('rooms', 'timetables.room_id', '=', 'rooms.id')
-
         ->join('timeslots', 'timetables.timeslot_id', '=', 'timeslots.id')
-
         ->join('semesters', 'subjects.semester_id', '=', 'semesters.id')
 
         ->leftJoin('teacher_attendances', function ($join) use ($todayDate) {
@@ -858,27 +913,33 @@ public function supervision()
                 'teacher_attendances.date',
                 $todayDate
             );
+
+        })
+
+        ->leftJoin('teacher_leaves', function ($join) {
+
+            $join->on(
+                'teachers.id',
+                '=',
+                'teacher_leaves.teacher_id'
+            );
+
         })
 
         ->where('days.day_name', $todayName)
-
         ->where('subjects.branch_id', $teacher->branch_id)
-
         ->where('semesters.status', 'Active')
 
         ->select(
+
             'timetables.id as timetable_id',
 
             'courses.courseName',
-
             'courses.short_name',
 
             'subjects.subjectName',
-
             'subjects.subjectCode',
-
             'subjects.nta_level',
-
             'subjects.credit_hour',
 
             'semesters.semName as semester',
@@ -886,13 +947,10 @@ public function supervision()
             'days.day_name as day',
 
             'timeslots.start_time',
-
             'timeslots.end_time',
 
             'teachers.firstname',
-
             'teachers.middlename',
-
             'teachers.lastname',
 
             'rooms.name as room_name',
@@ -902,15 +960,15 @@ public function supervision()
                     teacher_attendances.status,
                     'absent'
                 ) as status
-            ")
+            "),
+
+            'teacher_leaves.status as leave_status'
+
         )
 
         ->orderBy('courses.courseName')
-
         ->orderBy('subjects.nta_level')
-
         ->orderBy('semesters.id')
-
         ->orderBy('timeslots.start_time')
 
         ->get();
@@ -925,7 +983,9 @@ public function supervision()
 
                     return $ntaGroup
                         ->groupBy('semester');
+
                 });
+
         });
 
     return view(
@@ -1168,6 +1228,63 @@ public function teacherTimetable1()
 
     return view('details', compact('subject', 'attendances', 'startDate', 'endDate'));
 }
+
+    public function updateStatus(Request $request)
+{
+
+    $request->validate([
+
+        'attendance_id'=>'required|exists:teacher_attendances,id',
+
+        'status'=>'required|in:present,absent'
+
+    ]);
+
+    $attendance = TeacherAttendance::findOrFail($request->attendance_id);
+
+    $attendance->status = $request->status;
+
+    $attendance->save();
+
+    return back()->with(
+        'success',
+        'Attendance updated successfully.'
+    );
+
+}
+
+     public function store1(Request $request)
+    {
+
+        $request->validate([
+
+            'teacher_id'=>'required',
+
+            'reason'=>'required'
+
+        ]);
+
+        TeacherLeave::create([
+
+            'teacher_id'=>$request->teacher_id,
+
+            'reason'=>$request->reason,
+
+            'start_date'=>$request->reason=="Leave"
+                ?$request->start_date
+                :null,
+
+            'end_date'=>$request->reason=="Leave"
+                ?$request->end_date
+                :null,
+
+            'status'=>'stop'
+
+        ]);
+
+        return back()->with('success','Saved Successfully');
+
+    }
 
 
 }

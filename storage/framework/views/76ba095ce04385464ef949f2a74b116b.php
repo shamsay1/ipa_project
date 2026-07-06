@@ -197,93 +197,141 @@ INSTITUTE OF PUBLIC AND ADMINISTRATION
 
     <tbody>
 
-        <?php $i = 1; ?>
+<?php $i = 1; ?>
 
-        <?php $__empty_1 = true; $__currentLoopData = $lessons; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $lesson): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
+<?php $__empty_1 = true; $__currentLoopData = $lessons; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $lesson): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
 
-        <tr>
+<tr>
 
-            <td><?php echo e($i++); ?></td>
+    <td class="<?php echo e(($lesson->leave_status == 'stop' || $lesson->leave_status == 'completed') ? 'bg-danger text-white' : ''); ?>"><?php echo e($i++); ?></td>
 
-            <td><?php echo e($lesson->subjectName); ?></td>
-
-            <td><?php echo e($lesson->subjectCode ?? '-'); ?></td>
-
-            <td>
-                <?php echo e($lesson->start_time); ?> - <?php echo e($lesson->end_time); ?>
-
-            </td>
-
-            <td><?php echo e($lesson->room_name ?? 'N/A'); ?></td>
-
-            <td>
-                <?php echo e($lesson->firstname ?? ''); ?> <?php echo e($lesson->middlename ?? ''); ?> <?php echo e($lesson->lastname ?? ''); ?>
-
-            </td>
-
-            <td>
-                <?php if($lesson->status == 'present'): ?>
-                    <span class="badge bg-success">Present</span>
-                <?php elseif($lesson->status == 'emergency'): ?>
-                    <span class="badge bg-info">Emergency</span>
-                <?php else: ?>
-                    <span class="badge bg-danger">Absent</span>
-                <?php endif; ?>
-            </td>
-
-            <td>
-
-<?php if($lesson->status == 'absent'): ?>
-
-    <!-- Attend -->
-    <button class="btn btn-success btn-sm"
-        data-bs-toggle="modal"
-        data-bs-target="#confirmPresentModal"
-        data-id="<?php echo e($lesson->timetable_id); ?>">
-        Attend
-    </button>
-
-   
+    <td class="<?php echo e(($lesson->leave_status == 'stop' || $lesson->leave_status == 'completed') ? 'bg-danger text-white' : ''); ?>">
+        <?php echo e($lesson->subjectName); ?>
 
 
-<?php else: ?>
+        <?php if($lesson->leave_status=='stop'): ?>
+            <br>
+            <small class="text-white fw-bold">
+                Somo limesimamishwa
+            </small>
 
-    <button class="btn btn-success btn-sm" disabled>
-        Present
-    </button>
+            <?php if($lesson->reason=="Leave"): ?>
+                <br>
+                <small class="text-white fw-bold">Mwalimu yuko likizo/semina</small>
+            <?php elseif($lesson->reason=="Syllabus Completed"): ?>
+               <br>
+                <small>Mwalimu amemaliza Topics(Syllabus)</small>
+            <?php endif; ?>
+        <?php endif; ?>
 
-<?php endif; ?>
+    </td>
 
-</td>
-<td>
-    <?php if($lesson->status == 'present'): ?>
-    <button class="btn btn-success btn-sm" disabled>
-        Present
-    </button>
-    <?php else: ?>
-    <button class="btn btn-warning btn-sm"
-        data-bs-toggle="modal"
-        data-bs-target="#emergencyModal"
-        data-id="<?php echo e($lesson->timetable_id); ?>">
-        Emergency
-    </button>
-    <?php endif; ?>
-</td>
+    <td class="<?php echo e(($lesson->leave_status == 'stop' || $lesson->leave_status == 'completed') ? 'bg-danger text-white' : ''); ?>"><?php echo e($lesson->subjectCode); ?></td>
 
+    <td class="<?php echo e(($lesson->leave_status == 'stop' || $lesson->leave_status == 'completed') ? 'bg-danger text-white' : ''); ?>"><?php echo e($lesson->start_time); ?> - <?php echo e($lesson->end_time); ?></td>
 
-        </tr>
+    <td class="<?php echo e(($lesson->leave_status == 'stop' || $lesson->leave_status == 'completed') ? 'bg-danger text-white' : ''); ?>"><?php echo e($lesson->room_name ?? 'N/A'); ?></td>
 
-        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
+    <td class="<?php echo e(($lesson->leave_status == 'stop' || $lesson->leave_status == 'completed') ? 'bg-danger text-white' : ''); ?>">
+        <?php echo e($lesson->firstname); ?>
 
-        <tr>
-            <td colspan="100%" class="text-center">
-                No lessons available
-            </td>
-        </tr>
+        <?php echo e($lesson->middlename); ?>
+
+        <?php echo e($lesson->lastname); ?>
+
+    </td>
+
+    <td class="<?php echo e(($lesson->leave_status == 'stop' || $lesson->leave_status == 'completed') ? 'bg-danger text-white' : ''); ?>">
+
+        <?php if($lesson->leave_status=='stop'): ?>
+
+            <span class="badge bg-dark">Lesson Suspended</span>
+
+        <?php elseif($lesson->status=='present'): ?>
+
+            <span class="badge bg-success">Present</span>
+
+        <?php elseif($lesson->status=='emergency'): ?>
+
+            <span class="badge bg-info">Emergency</span>
+
+        <?php else: ?>
+
+            <span class="badge bg-danger">Absent</span>
 
         <?php endif; ?>
 
-    </tbody>
+    </td>
+
+    <td class="<?php echo e(($lesson->leave_status == 'stop' || $lesson->leave_status == 'completed') ? 'bg-danger text-white' : ''); ?>">
+
+        <?php if($lesson->leave_status=='stop'): ?>
+
+            <button class="btn btn-secondary btn-sm" disabled>
+                Suspended
+            </button>
+
+        <?php elseif($lesson->status=='absent'): ?>
+
+            <button
+                class="btn btn-success btn-sm"
+                data-bs-toggle="modal"
+                data-bs-target="#confirmPresentModal"
+                data-id="<?php echo e($lesson->timetable_id); ?>">
+                Attend
+            </button>
+
+        <?php else: ?>
+
+            <button class="btn btn-success btn-sm" disabled>
+                Present
+            </button>
+
+        <?php endif; ?>
+
+    </td>
+
+    <td class="<?php echo e(($lesson->leave_status == 'stop' || $lesson->leave_status == 'completed') ? 'bg-danger text-white' : ''); ?>">
+
+        <?php if($lesson->leave_status=='stop'): ?>
+
+            <button class="btn btn-secondary btn-sm" disabled>
+                Suspended
+            </button>
+
+        <?php elseif($lesson->status=='present'): ?>
+
+            <button class="btn btn-success btn-sm" disabled>
+                Present
+            </button>
+
+        <?php else: ?>
+
+            <button
+                class="btn btn-warning btn-sm"
+                data-bs-toggle="modal"
+                data-bs-target="#emergencyModal"
+                data-id="<?php echo e($lesson->timetable_id); ?>">
+                Emergency
+            </button>
+
+        <?php endif; ?>
+
+    </td>
+
+</tr>
+
+<?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
+
+<tr>
+    <td colspan="9" class="text-center">
+        No lessons available
+    </td>
+</tr>
+
+<?php endif; ?>
+
+</tbody>
 
 </table>
     <?php endif; ?>

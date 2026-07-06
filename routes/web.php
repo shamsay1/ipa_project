@@ -59,6 +59,13 @@ Route::post('/reset-password', [ResestController::class, 'updatePassword'])->nam
 */
 
 Route::middleware(['auth:teacher', 'admin'])->group(function () {
+Route::put('/teacher-exception/update',
+[TeacherController::class,'updateTeacherException'])
+->name('teacher.exception.update');
+
+Route::post('/teacher-attendance-exception/store',
+    [TeacherController::class,'store1'])
+    ->name('teacher.exception.store');
 Route::post('/import-course-rooms', [CourseRoomController::class, 'importCourseRooms'])->name("cimport");
     Route::get('/export-course-rooms-template', function () {
     return Excel::download(new Course_RoomsExport(Auth::user()->branch_id), 'course_rooms_template.xlsx');
@@ -104,6 +111,9 @@ Route::post('/timetable/swap', [TimetableGeneratorController::class, 'swapTimeta
 */
 
 Route::middleware(['auth:teacher'])->group(function () {
+    Route::post('/attendance/update-status',
+    [TeacherController::class,'updateStatus'])
+    ->name('attendance.update.status');
 
     Route::get("/teacher-dash",[TeacherController::class,"teacherDash"])->name("dash1");
     Route::get("/superdash",[TeacherController::class,"superdash"])->name("supdash");
@@ -137,7 +147,8 @@ Route::middleware(['auth:teacher'])->group(function () {
     Route::resource("/subject", SubjectController::class)->except("show","create");
     Route::resource("/timeslot", TimeslotController::class);
     Route::resource('/course-classrooms', CourseRoomController::class);
-
+    Route::post('/holiday/store', [TeacherController::class, 'store2'])
+    ->name('holiday.store');
     Route::post("/roomImport",[RoomController::class,"classImport"])->name("class.import");
     Route::post("/subject/import",[SubjectController::class,"import"])->name("subject.import");
     Route::post("/course/import",[CourseController::class,"import"])->name("course.import");
@@ -156,6 +167,13 @@ Route::middleware(['auth:teacher'])->group(function () {
     | TIMETABLE
     |--------------------------------------------------------------------------
     */
+    Route::get('/timetable/valid-swap-slots', [TimetableGeneratorController::class, 'validSwapSlots']);
+    Route::get('/timetable/suitable-rooms/{id}', [TimetableGeneratorController::class, 'suitableRooms']);
+Route::get('/timetable/teacher-periods', [TimetableGeneratorController::class, 'teacherPeriods']);
+Route::post('/timetable/swap-room', [TimetableGeneratorController::class, 'swapRoomOnly']);
+Route::post('/timetable/swap-schedule', [TimetableGeneratorController::class, 'swapSchedule']);
+   Route::post('/timetable/solve-remaining', [TimetableGeneratorController::class, 'solveRemainingIssues'])
+    ->name('timetable.solveRemaining');
     Route::post('/available-rooms', [TimetableGeneratorController::class, 'availableRooms'])
     ->name('timetable.availableRooms');
 

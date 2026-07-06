@@ -349,7 +349,8 @@
 
 <a href="{{ route('timetable.edit',$entry->timetable_id) }}"
 class="btn btn-sm btn-outline-primary">
-Edit
+<i class="bi bi-eye"></i>
+
 </a>
 @if($systemTimetable->status == "created")
 <button 
@@ -369,7 +370,7 @@ data-nta="{{ $entry->nta_level }}"
 data-semester="{{ $entry->semester_name }}"
 >
 
-Email
+<i class="bi bi-envelope"></i>
 </button>
 @endif
 
@@ -379,19 +380,22 @@ Email
 {{-- ya mwalimu huyu na mwalimu wa pili            --}}
 {{-- =========================================== --}}
 <button
-type="button"
-class="btn btn-sm btn-warning mt-1"
-onclick="openShiftModal(this)"
-
-data-timetable-id="{{ $entry->timetable_id }}"
-data-teacher-id="{{ $entry->teacher_id ?? '' }}"
-data-subject="{{ $entry->subjectName }}"
-data-teacher="{{ $entry->firstname }} {{ $entry->middlename }} {{ $entry->lastname }}"
-data-day="{{ $dayName }}"
-data-time="{{ $start->format('H:i') }} - {{ $start->copy()->addHour()->format('H:i') }}"
-data-room="{{ $entry->room_name }}"
+    type="button"
+    class="btn btn-sm btn-warning mt-1"
+    onclick="openShiftModal(this)"
+    data-timetable-id="{{ $entry->timetable_id }}"
+    data-teacher-id="{{ $entry->teacher_id ?? '' }}"
+    data-subject-id="{{ $entry->subject_id }}"
+    data-subject="{{ $entry->subjectName }}"
+    data-teacher="{{ $entry->firstname }} {{ $entry->middlename }} {{ $entry->lastname }}"
+    data-day-id="{{ $entry->day_id }}"
+    data-day="{{ $dayName }}"
+    data-timeslot-id="{{ $entry->timeslot_id }}"
+    data-time="{{ $start->format('H:i') }} - {{ $start->copy()->addHour()->format('H:i') }}"
+    data-room-id="{{ $entry->room_id }}"
+    data-room="{{ $entry->room_name }}"
 >
-<i class="bi bi-arrow-left-right"></i> Shift
+    <i class="bi bi-arrow-left-right"></i>
 </button>
 
 </td>
@@ -461,187 +465,264 @@ data-room="{{ $entry->room_name }}"
 @endphp
 
 <div class="modal fade" id="shiftModal" tabindex="-1">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content">
+<div class="modal-dialog modal-lg">
+<div class="modal-content">
 
-      <div class="modal-header bg-warning">
-        <h5 class="modal-title">Badilishana Vipindi Kati ya Walimu Wawili</h5>
+    <div class="modal-header bg-warning">
+        <h5 class="modal-title">Change the Session</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
+    </div>
 
-      <div class="modal-body">
+    <div class="modal-body">
 
-        <div class="row">
+        {{-- INFO YA MWALIMU WA KWANZA --}}
+        <div class="alert alert-secondary" id="shiftCurrentInfo"></div>
 
-          {{-- SEHEMU 1: MWALIMU WA KWANZA --}}
-          <div class="col-md-6 mb-3">
-            <h6 class="text-primary">Mwalimu wa Kwanza</h6>
-            <div class="alert alert-secondary" id="shiftCurrentInfo"></div>
-          </div>
+        <input type="hidden" id="shiftTimetableId">
+        <input type="hidden" id="shiftTeacherId">
+        <input type="hidden" id="shiftSubjectId">
+        <input type="hidden" id="shiftDayId">
+        <input type="hidden" id="shiftTimeslotId">
+        <input type="hidden" id="shiftRoomId">
 
-          {{-- SEHEMU 2: MWALIMU WA PILI --}}
-          <div class="col-md-6 mb-3">
-            <h6 class="text-success">Mwalimu wa Pili</h6>
+        <hr>
 
-            <div class="mb-2">
-              <label class="form-label">Chagua Mwalimu</label>
-              <select id="secondTeacherSelect" class="form-select" onchange="loadTeacherPeriods()">
-                <option value="">-- Chagua Mwalimu --</option>
-                @foreach($teachers as $t)
-                  <option value="{{ $t->id }}">
-                    {{ $t->firstname }} {{ $t->middlename }} {{ $t->lastname }}
-                  </option>
-                @endforeach
-              </select>
+        {{-- STEP 1: CHAGUA MODE --}}
+        <div class="mb-3">
+            <label class="form-label fw-bold">Select one of following option</label>
+            <div class="d-flex gap-3">
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="shiftMode" id="modeRoom" value="room" onchange="switchShiftMode()">
+                    <label class="form-check-label" for="modeRoom">Change only classrooms (Swap Classroom)</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="shiftMode" id="modeSchedule" value="schedule" onchange="switchShiftMode()">
+                    <label class="form-check-label" for="modeSchedule">Changes timeslots/day</label>
+                </div>
             </div>
+        </div>
 
-            <div class="mb-2">
-              <label class="form-label">Chagua Kipindi cha Mwalimu Huyo</label>
-              <select id="secondPeriodSelect" class="form-select">
-                <option value="">-- Chagua mwalimu kwanza --</option>
-              </select>
-            </div>
-          </div>
+        {{-- MODE 1: SWAP CLASSROOM ONLY --}}
+        <div id="roomModeSection" class="d-none">
+            <h6 class="text-primary">Choose the new room</h6>
+            <select id="newRoomSelect" class="form-select mb-2">
+                <option value="">-- Working... --</option>
+            </select>
+            <small class="text-muted">
+                Mfumo utatafuta kama kuna kipindi kingine kinachotumia chumba hicho
+                wakati huohuo na kubadilishana vyumba (swap). Siku na muda havitabadilika.
+            </small>
+        </div>
 
+        {{-- MODE 2: SWAP DAY + TIMESLOT --}}
+        <div id="scheduleModeSection" class="d-none">
+            <h6 class="text-success">Chagua Kipindi cha Kubadilishana Nacho</h6>
+
+            <div id="scheduleLoadingMsg" class="text-muted small mb-2">Inatafuta vipindi vinavyowezekana...</div>
+
+            <select id="swapTargetSelect" class="form-select mb-2" size="6">
+                <option value="">-- Inapakia... --</option>
+            </select>
+
+            <small class="text-muted">
+                Vipindi vilivyoorodheshwa hapa ni vile ambavyo mwalimu wako na darasa lake
+                havitakuwa na mgongano wa muda, na vilevile mwalimu/darasa la kipindi
+                atakachobadilishana navyo. Chumba cha kila mmoja kitabaki kama kilivyo.
+            </small>
         </div>
 
         <hr>
         <div id="shiftAlertBox"></div>
 
-        <input type="hidden" id="shiftTimetableId">
-
-        <small class="text-muted">
-          Mfumo utaangalia chumba, mwalimu, na darasa/kundi kabla ya kubadilishana,
-          ili kuepuka migongano kwa pande zote mbili.
-        </small>
-
-      </div>
-
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Funga</button>
-        <button type="button" class="btn btn-warning" onclick="confirmShift()">Badilishana</button>
-      </div>
-
     </div>
-  </div>
+
+    <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Funga</button>
+        <button type="button" class="btn btn-warning" id="confirmShiftBtn" onclick="confirmShift()" disabled>Badilishana</button>
+    </div>
+
 </div>
-
+</div>
+</div>
 <script>
-/**
- * Inafunguliwa wakati button ya "Shift" ya kipindi fulani inabonyezwa.
- * Inajaza taarifa za Mwalimu wa Kwanza (sehemu ya kushoto), na
- * inazima chaguo la kumchagua mwalimu huyu mwenyewe kwenye dropdown
- * ya Mwalimu wa Pili (asijibadilishe na yeye mwenyewe).
- */
-function openShiftModal(btn) {
-    document.getElementById('shiftTimetableId').value = btn.dataset.timetableId;
+let shiftModal;
 
-    document.getElementById('shiftCurrentInfo').innerHTML =
-        `<strong>${btn.dataset.subject}</strong><br>` +
-        `${btn.dataset.teacher}<br>` +
-        `${btn.dataset.day} | ${btn.dataset.time} | Chumba: ${btn.dataset.room}`;
+document.addEventListener('DOMContentLoaded', function () {
+    shiftModal = new bootstrap.Modal(document.getElementById('shiftModal'));
+});
+
+function openShiftModal(btn) {
+    // Jaza data ya kipindi cha sasa (Mwalimu A)
+    document.getElementById('shiftTimetableId').value = btn.dataset.timetableId;
+    document.getElementById('shiftTeacherId').value   = btn.dataset.teacherId;
+    document.getElementById('shiftSubjectId').value   = btn.dataset.subjectId;
+    document.getElementById('shiftDayId').value       = btn.dataset.dayId;
+    document.getElementById('shiftTimeslotId').value  = btn.dataset.timeslotId;
+    document.getElementById('shiftRoomId').value      = btn.dataset.roomId;
+
+    document.getElementById('shiftCurrentInfo').innerHTML = `
+        <strong>${btn.dataset.teacher}</strong><br>
+        Subject: ${btn.dataset.subject}<br>
+        Day: ${btn.dataset.day} | Muda: ${btn.dataset.time}<br>
+        Room: ${btn.dataset.room}
+    `;
+
+    // Reset sections
+    document.getElementById('roomModeSection').classList.add('d-none');
+    document.getElementById('scheduleModeSection').classList.add('d-none');
+    document.querySelectorAll('input[name="shiftMode"]').forEach(r => r.checked = false);
+
+    document.getElementById('newRoomSelect').innerHTML = '<option value="">-- Inapakia vyumba... --</option>';
+    document.getElementById('swapTargetSelect').innerHTML = '<option value="">-- Inapakia... --</option>';
+    document.getElementById('scheduleLoadingMsg').classList.remove('d-none');
+    document.getElementById('scheduleLoadingMsg').textContent = 'Inatafuta vipindi vinavyowezekana...';
 
     document.getElementById('shiftAlertBox').innerHTML = '';
+    document.getElementById('confirmShiftBtn').disabled = true;
 
-    const teacherSelect = document.getElementById('secondTeacherSelect');
-    teacherSelect.value = '';
-    Array.from(teacherSelect.options).forEach(opt => {
-        opt.disabled = (opt.value !== '' && opt.value === btn.dataset.teacherId);
-    });
-
-    document.getElementById('secondPeriodSelect').innerHTML =
-        '<option value="">-- Chagua mwalimu kwanza --</option>';
-
-    new bootstrap.Modal(document.getElementById('shiftModal')).show();
+    shiftModal.show();
 }
 
-/**
- * Mwalimu wa Pili akichaguliwa kwenye dropdown - inapakia (AJAX)
- * orodha ya vipindi vyake vyote ili mtumiaji achague kipi
- * cha kubadilishana nacho.
- */
-function loadTeacherPeriods() {
-    const teacherId = document.getElementById('secondTeacherSelect').value;
-    const periodSelect = document.getElementById('secondPeriodSelect');
-    const currentId = document.getElementById('shiftTimetableId').value;
+function switchShiftMode() {
+    const mode = document.querySelector('input[name="shiftMode"]:checked')?.value;
+    document.getElementById('roomModeSection').classList.toggle('d-none', mode !== 'room');
+    document.getElementById('scheduleModeSection').classList.toggle('d-none', mode !== 'schedule');
+    document.getElementById('confirmShiftBtn').disabled = false;
 
-    if (!teacherId) {
-        periodSelect.innerHTML = '<option value="">-- Chagua mwalimu kwanza --</option>';
-        return;
+    if (mode === 'room') {
+        loadSuitableRooms();
+    } else if (mode === 'schedule') {
+        loadValidSwapSlots();
     }
+}
 
-    periodSelect.innerHTML = '<option value="">Inapakia...</option>';
+// ================================
+// MODE 1: Load rooms suitable for subject
+// ================================
+function loadSuitableRooms() {
+    const timetableId = document.getElementById('shiftTimetableId').value;
+    const select = document.getElementById('newRoomSelect');
+    select.innerHTML = '<option value="">-- Inapakia... --</option>';
 
-    fetch(`{{ route('timetable.teacher.periods') }}?teacher_id=${teacherId}&exclude_id=${currentId}`)
+    fetch(`/timetable/suitable-rooms/${timetableId}`)
         .then(res => res.json())
         .then(data => {
-            if (!data.entries || data.entries.length === 0) {
-                periodSelect.innerHTML = '<option value="">Mwalimu huyu hana vipindi vingine</option>';
-                return;
-            }
-
-            periodSelect.innerHTML = '<option value="">-- Chagua kipindi --</option>';
-
-            data.entries.forEach(e => {
-                const opt = document.createElement('option');
-                opt.value = e.id;
-                opt.textContent = `${e.day_name} | ${e.start_time}-${e.end_time} | ${e.room_name} | ${e.subject_name}`;
-                periodSelect.appendChild(opt);
+            select.innerHTML = '<option value="">-- Chagua Chumba --</option>';
+            data.rooms.forEach(r => {
+                if (r.id != document.getElementById('shiftRoomId').value) {
+                    select.innerHTML += `<option value="${r.id}">${r.name} (${r.type}${r.practical_type ? ' - ' + r.practical_type : ''})</option>`;
+                }
             });
         })
         .catch(() => {
-            periodSelect.innerHTML = '<option value="">Imeshindwa kupakia vipindi</option>';
+            select.innerHTML = '<option value="">Hitilafu kupakia vyumba</option>';
         });
 }
 
-/**
- * Inatuma ombi la kubadilishana (swap) kati ya kipindi cha Mwalimu wa
- * Kwanza na kipindi kilichochaguliwa cha Mwalimu wa Pili. Server
- * itaangalia migongano kabla ya kufanya mabadiliko.
- */
-function confirmShift() {
-    const targetId = document.getElementById('secondPeriodSelect').value;
-    const alertBox = document.getElementById('shiftAlertBox');
+// ================================
+// MODE 2: Load vipindi vinavyowezekana kubadilishana navyo
+// ================================
+function loadValidSwapSlots() {
+    const timetableId = document.getElementById('shiftTimetableId').value;
+    const select = document.getElementById('swapTargetSelect');
+    const loadingMsg = document.getElementById('scheduleLoadingMsg');
 
-    if (!targetId) {
-        alertBox.innerHTML = '<div class="alert alert-warning">Tafadhali chagua mwalimu wa pili na kipindi chake.</div>';
-        return;
-    }
+    select.innerHTML = '<option value="">-- Inapakia... --</option>';
+    loadingMsg.classList.remove('d-none');
+    loadingMsg.textContent = 'Inatafuta vipindi vinavyowezekana...';
 
-    alertBox.innerHTML = '<div class="alert alert-info">Inakagua migongano, tafadhali subiri...</div>';
+    fetch(`/timetable/valid-swap-slots?timetable_id=${timetableId}`)
+        .then(res => res.json())
+        .then(data => {
+            loadingMsg.classList.add('d-none');
+            select.innerHTML = '';
 
-    fetch(`{{ route('timetable.swap') }}`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-        },
-        body: JSON.stringify({
-            timetable_id_1: document.getElementById('shiftTimetableId').value,
-            timetable_id_2: targetId
-        })
-    })
-    .then(res => res.json().then(data => ({ status: res.status, body: data })))
-    .then(({ status, body }) => {
-        if (status === 200 && body.success) {
-            alertBox.innerHTML = '<div class="alert alert-success">' + body.message + '</div>';
-            setTimeout(() => location.reload(), 1200);
-        } else {
-            let errHtml = '<div class="alert alert-danger"><strong>' +
-                (body.message || 'Imeshindikana kubadilishana.') + '</strong>';
-
-            if (body.errors && body.errors.length) {
-                errHtml += '<ul class="mb-0 mt-2">';
-                body.errors.forEach(e => errHtml += `<li>${e}</li>`);
-                errHtml += '</ul>';
+            if (!data.slots || data.slots.length === 0) {
+                select.innerHTML = '<option value="">Hakuna kipindi kinachowezekana kwa sasa</option>';
+                return;
             }
-            errHtml += '</div>';
-            alertBox.innerHTML = errHtml;
+
+            select.innerHTML = '<option value="">-- Chagua Kipindi --</option>';
+            data.slots.forEach(s => {
+                select.innerHTML += `<option value="${s.id}">
+                    ${s.day_name} ${s.start_time}-${s.end_time} | ${s.subject_name} | ${s.teacher_name} | Chumba: ${s.room_name}
+                </option>`;
+            });
+        })
+        .catch(() => {
+            loadingMsg.classList.add('d-none');
+            select.innerHTML = '<option value="">Hitilafu kupakia vipindi</option>';
+        });
+}
+
+// ================================
+// CONFIRM SHIFT (Mode 1 au Mode 2)
+// ================================
+function confirmShift() {
+    const mode = document.querySelector('input[name="shiftMode"]:checked')?.value;
+    const alertBox = document.getElementById('shiftAlertBox');
+    alertBox.innerHTML = '';
+
+    if (mode === 'room') {
+
+        const newRoomId = document.getElementById('newRoomSelect').value;
+        if (!newRoomId) {
+            alertBox.innerHTML = `<div class="alert alert-danger">Chagua chumba kwanza.</div>`;
+            return;
         }
-    })
-    .catch(() => {
-        alertBox.innerHTML = '<div class="alert alert-danger">Hitilafu ya mtandao/server imetokea.</div>';
-    });
+
+        fetch('/timetable/swap-room', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+            },
+            body: JSON.stringify({
+                timetable_id: document.getElementById('shiftTimetableId').value,
+                new_room_id: newRoomId
+            })
+        })
+        .then(res => res.json())
+        .then(handleShiftResponse);
+
+    } else if (mode === 'schedule') {
+
+        const targetId = document.getElementById('swapTargetSelect').value;
+        if (!targetId) {
+            alertBox.innerHTML = `<div class="alert alert-danger">Chagua kipindi cha kubadilishana nacho.</div>`;
+            return;
+        }
+
+        fetch('/timetable/swap-schedule', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+            },
+            body: JSON.stringify({
+                timetable_id_1: document.getElementById('shiftTimetableId').value,
+                timetable_id_2: targetId
+            })
+        })
+        .then(res => res.json())
+        .then(handleShiftResponse);
+
+    } else {
+        alertBox.innerHTML = `<div class="alert alert-danger">Chagua mode kwanza (Chumba au Siku/Muda).</div>`;
+    }
+}
+
+function handleShiftResponse(data) {
+    const alertBox = document.getElementById('shiftAlertBox');
+    if (data.success) {
+        alertBox.innerHTML = `<div class="alert alert-success">${data.message}</div>`;
+        setTimeout(() => location.reload(), 1200);
+    } else {
+        let msg = `<div class="alert alert-danger"><strong>${data.message}</strong><ul class="mb-0">`;
+        (data.errors || []).forEach(e => msg += `<li>${e}</li>`);
+        msg += `</ul></div>`;
+        alertBox.innerHTML = msg;
+    }
 }
 </script>
 

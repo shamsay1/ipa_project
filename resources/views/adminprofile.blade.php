@@ -187,7 +187,8 @@
                     <i class="bi bi-lock-fill me-1"></i> Change Password
                 </a>
             </li>
-            @if($teacher->user_level=="admin")
+
+            @if($teacher->user_level=="admin" || $teacher->role=="Supervisor")
             <li class="nav-item">
                 <a class="nav-link" data-bs-toggle="tab" href="#nonTeaching" role="tab">
                     <i class="bi bi-calendar-x-fill me-1"></i> Settings
@@ -277,7 +278,7 @@
                     </form>
                 </div>
             </div>
-           
+   @if(Auth::user()->user_level =="admin")        
 <div class="tab-pane fade" id="nonTeaching" role="tabpanel">
     <div class="card p-3">
         <h5 class="text-primary mb-3">System Settings</h5>
@@ -299,9 +300,59 @@
 
     </div>
 </div>
+@endif
+
+   @if(Auth::user()->role =="Supervisor")  
+   <div class="tab-pane fade" id="nonTeaching" role="tabpanel">
+    <div class="card p-3">
+
+        <h5 class="text-primary mb-3">Add Holiday</h5>
+
+        <form action="{{ route('holiday.store') }}" method="POST">
+            @csrf
+
+            <div class="mb-3">
+                <label class="form-label">Holiday Name</label>
+                <input type="text"
+                       name="name"
+                       class="form-control"
+                       placeholder="Enter Holiday Name"
+                       required>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Holiday Date</label>
+                <input type="date"
+                       name="date"
+                       class="form-control"
+                       required>
+            </div>
+
+            <button type="submit" class="btn btn-success">
+                Save Holiday
+            </button>
+
+        </form>
+
+    </div>
+</div>      
+ @endif
+
 
         </div>
     </div>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+@if(session('success'))
+<script>
+Swal.fire({
+    icon: 'success',
+    title: 'Success!',
+    text: '{{ session('success') }}',
+    confirmButtonText: 'OK'
+});
+</script>
+@endif
 @endsection
 

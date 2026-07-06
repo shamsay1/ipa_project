@@ -31,6 +31,163 @@ class TimetableGeneratorController extends Controller
 {
 
 
+public function solveRemainingIssues(Request $request)
+{
+    try {
+        ini_set('max_execution_time', 300);
+        set_time_limit(300);
+        ignore_user_abort(true);
+
+        $dryRun = $request->boolean('dry_run', true);
+
+        $teacher  = Auth::user();
+        $branchId = $teacher->branch_id;
+
+        $semesterIdsInTimetable = DB::table('timetables')
+            ->where('branch_id', $branchId)
+            ->distinct()
+            ->pluck('semester_id');
+
+        if ($semesterIdsInTimetable->isEmpty()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Hakuna timetable iliyopatikana kwenye database kwa branch hii.'
+            ]);
+        }
+
+        $dbConn   = config('database.default');
+        $dbConfig = config("database.connections.$dbConn");
+
+        $pythonCommand = strtoupper(substr(PHP_OS, 0, 3)) === 'WIN' ? 'python' : 'python3';
+
+        $directory = storage_path('app');
+        if (!file_exists($directory)) {
+            mkdir($directory, 0777, true);
+        }
+
+        $allMoved        = [];
+        $allUnresolved   = [];
+        $allDiagnostics  = [];
+        $allErrors       = [];   // <-- MPYA: kukusanya hitilafu za python
+        $totalMoved      = 0;
+        $totalUnresolved = 0;
+        $anyApplied      = false;
+
+        foreach ($semesterIdsInTimetable as $semesterId) {
+
+            $config = [
+                'host'        => $dbConfig['host'],
+                'port'        => $dbConfig['port'],
+                'user'        => $dbConfig['username'],
+                'password'    => $dbConfig['password'],
+                'database'    => $dbConfig['database'],
+                'semester_id' => $semesterId,
+                'branch_id'   => $branchId,
+                'dry_run'     => $dryRun,
+            ];
+
+            $configFile = $directory . '/repair_config_' . $semesterId . '_' . time() . '_' . uniqid() . '.json';
+            file_put_contents($configFile, json_encode($config));
+
+            $process = new Process([
+                $pythonCommand,
+                base_path('app/GeneticAlgorithm/repair_main.py'),
+                $configFile
+            ]);
+            $process->setTimeout(300);
+            $process->run();
+
+            $output      = $process->getOutput();
+            $errorOutput = $process->getErrorOutput();
+
+            if (file_exists($configFile)) {
+                unlink($configFile);
+            }
+
+            // Python yetu inaandika error kama JSON kwenye STDOUT (siyo stderr),
+            // kwa hiyo tunakagua vyote viwili.
+            if (!$process->isSuccessful()) {
+                Log::error("Repair python failed (semester {$semesterId}). STDOUT: {$output} | STDERR: {$errorOutput}");
+                $allErrors[] = [
+                    'semester_id' => $semesterId,
+                    'stage'       => 'process_failed',
+                    'stdout'      => $output,
+                    'stderr'      => $errorOutput,
+                ];
+                continue;
+            }
+
+            $result = json_decode($output, true);
+
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                Log::error("Repair JSON decode error (semester {$semesterId}): " . $output);
+                $allErrors[] = [
+                    'semester_id' => $semesterId,
+                    'stage'       => 'json_decode_error',
+                    'raw_output'  => $output,
+                ];
+                continue;
+            }
+
+            if (isset($result['error'])) {
+                Log::error("Repair engine error (semester {$semesterId}): " . $result['error']);
+                $allErrors[] = [
+                    'semester_id' => $semesterId,
+                    'stage'       => 'python_error',
+                    'error'       => $result['error'],
+                    'traceback'   => $result['traceback'] ?? null,
+                ];
+                continue;
+            }
+
+            $totalMoved      += $result['moved_count'] ?? 0;
+            $totalUnresolved += $result['unresolved_count'] ?? 0;
+            $allMoved         = array_merge($allMoved, $result['moved'] ?? []);
+            $allUnresolved    = array_merge($allUnresolved, $result['unresolved'] ?? []);
+
+            if (isset($result['diagnostics'])) {
+                $allDiagnostics[] = array_merge(
+                    ['semester_id' => $semesterId],
+                    $result['diagnostics']
+                );
+            }
+
+            if (!empty($result['applied'])) {
+                $anyApplied = true;
+            }
+        }
+
+        $message = $dryRun
+            ? "Uchambuzi umekamilika: vipindi {$totalMoved} vinaweza kurekebishwa, {$totalUnresolved} havikuweza kutatuliwa kiotomatiki."
+            : "Marekebisho yamehifadhiwa: vipindi {$totalMoved} vimehamishwa.";
+
+        if (!empty($allErrors)) {
+            $message .= " (ONYO: baadhi ya semester zilishindwa kuchakatwa - angalia 'errors' kwenye response au storage/logs/laravel.log)";
+        }
+
+        return response()->json([
+            'success'          => true,
+            'dry_run'          => $dryRun,
+            'applied'          => $anyApplied,
+            'moved_count'      => $totalMoved,
+            'unresolved_count' => $totalUnresolved,
+            'moved'            => $allMoved,
+            'unresolved'       => $allUnresolved,
+            'diagnostics'      => $allDiagnostics,
+            'errors'           => $allErrors,   // <-- angalia hii sasa
+            'message'          => $message,
+        ]);
+
+    } catch (\Exception $e) {
+        Log::error("Solve remaining error: " . $e->getMessage());
+        return response()->json([
+            'success' => false,
+            'message' => 'Hitilafu imetokea: ' . $e->getMessage()
+        ]);
+    }
+}
+
+
 
 public function printAllTeachers()
 {
@@ -424,6 +581,11 @@ public function generateTimetable(Request $request)
         })
         ->select(
     'timetables.id as timetable_id',
+    'timetables.subject_id',        // ← ONGEZA
+    'timetables.day_id',            // ← ONGEZA
+    'timetables.timeslot_id',       // ← ONGEZA
+    'timetables.room_id',           // ← ONGEZA
+    'subjects.teacher_id',          // ← ONGEZA
     'days.day_name',
     'timeslots.start_time',
     'timeslots.end_time',
@@ -2713,97 +2875,564 @@ private function findSwapConflicts($dayId, $slotId, $roomId, $subjectRow, array 
 //    MWALIMU WA PILI ALIYECHAGULIWA. Siku, muda, NA chumba vyote
 //    vinabadilishana kati ya vipindi viwili.
 // =====================================================================
-public function swapTimetable(Request $request)
+/**
+ * Helper: Angalia migongano yote kwa (subject, room, day, timeslot) fulani.
+ * Hii ndio "core" validation inayotumika na checkConflicts(), swapRoomOnly(), na swapSchedule().
+ */
+private function validateAssignment($subject, $room, $dayId, $timeslotId, array $excludeIds, $branchId): array
+{
+    $conflicts = [];
+
+    $subjectType = strtolower(trim($subject->subject_type));
+    $roomType    = strtolower(trim($room->type));
+    $requiredLab = strtolower(trim($subject->required_lab));
+
+    // ROOM TYPE VALIDATION
+    if ($subjectType === 'theory' && $roomType === 'lab') {
+        $conflicts[] = "Chumba {$room->name} ni Lab, halifai kwa somo la 'Theory' ({$subject->subjectName}).";
+    }
+
+    if ($subjectType === 'practical') {
+        if ($roomType !== 'lab') {
+            $conflicts[] = "Somo la 'Practical' ({$subject->subjectName}) linahitaji Lab, lakini {$room->name} si Lab.";
+        } elseif (strtolower(trim($room->practical_type)) !== $requiredLab) {
+            $conflicts[] = "Lab {$room->name} si aina sahihi. Somo linahitaji Lab ya '{$requiredLab}'.";
+        }
+    }
+
+    // SUBJECT SAME DAY
+    $subjectConflict = DB::table('timetables AS t')
+        ->join('subjects AS s', 't.subject_id', '=', 's.id')
+        ->where('s.semester_id', $subject->semester_id)
+        ->where('t.subject_id', $subject->id)
+        ->where('t.day_id', $dayId)
+        ->where('t.branch_id', $branchId)
+        ->whereNotIn('t.id', $excludeIds)   // ← BADILIKO
+        ->count();
+
+    if ($subjectConflict > 0) {
+        $conflicts[] = "Somo {$subject->subjectName} tayari lina kipindi siku hiyo.";
+    }
+
+    // ROOM DOUBLE BOOKING
+    $roomConflict = DB::table('timetables')
+        ->where('room_id', $room->id)
+        ->where('day_id', $dayId)
+        ->where('timeslot_id', $timeslotId)
+        ->whereNotIn('id', $excludeIds)     // ← BADILIKO
+        ->where('branch_id', $branchId)
+        ->count();
+
+    if ($roomConflict > 0) {
+        $conflicts[] = "Chumba {$room->name} tayari kinatumika wakati huo na kikundi kingine.";
+    }
+
+    // TEACHER DOUBLE BOOKING
+    $teacherConflict = DB::table('timetables AS t')
+        ->join('subjects AS s', 't.subject_id', '=', 's.id')
+        ->where('s.teacher_id', $subject->teacher_id)
+        ->where('t.day_id', $dayId)
+        ->where('t.timeslot_id', $timeslotId)
+        ->whereNotIn('t.id', $excludeIds)   // ← BADILIKO
+        ->where('t.branch_id', $branchId)
+        ->count();
+
+    if ($teacherConflict > 0) {
+        $conflicts[] = "Mwalimu wa somo {$subject->subjectName} tayari anafundisha kipindi kingine wakati huo.";
+    }
+
+    // NTA DOUBLE BOOKING
+    $ntaConflict = DB::table('timetables AS t')
+        ->join('subjects AS s', 't.subject_id', '=', 's.id')
+        ->where('s.course_id', $subject->course_id)
+        ->where('s.nta_level', $subject->nta_level)
+        ->where('s.semester_id', $subject->semester_id)
+        ->where('t.day_id', $dayId)
+        ->where('t.timeslot_id', $timeslotId)
+        ->where('t.branch_id', $branchId)
+        ->whereNotIn('t.id', $excludeIds)   // ← BADILIKO
+        ->count();
+
+    if ($ntaConflict > 0) {
+        $conflicts[] = "Kikundi hiki cha NTA (Semester {$subject->semester_id}) tayari kina kipindi wakati huo.";
+    }
+
+    // NTA DAILY LIMIT
+    $ntaLessons = DB::table('timetables AS t')
+        ->join('subjects AS s', 't.subject_id', '=', 's.id')
+        ->where('s.course_id', $subject->course_id)
+        ->where('s.nta_level', $subject->nta_level)
+        ->where('s.semester_id', $subject->semester_id)
+        ->where('t.day_id', $dayId)
+        ->where('t.branch_id', $branchId)
+        ->whereNotIn('t.id', $excludeIds)   // ← BADILIKO
+        ->count();
+
+    if ($ntaLessons >= 10) {
+        $conflicts[] = "Kikundi hiki cha NTA (Semester {$subject->semester_id}) kimefikia kikomo cha vipindi kwa siku hiyo.";
+    }
+
+    return $conflicts;
+}
+/**
+ * MODE 1: Orodha ya vyumba vinavyofaa kwa somo la kipindi husika.
+ */
+public function suitableRooms($id)
+{
+    $branchId = Auth::user()->branch_id;
+
+    $entry = DB::table('timetables')->where('id', $id)->where('branch_id', $branchId)->first();
+    if (!$entry) {
+        return response()->json(['rooms' => []]);
+    }
+
+    $subject = DB::table('subjects')->where('id', $entry->subject_id)->first();
+    if (!$subject) {
+        return response()->json(['rooms' => []]);
+    }
+
+    $subjectType = strtolower(trim($subject->subject_type));
+
+    if ($subjectType === 'practical') {
+        $rooms = DB::table('rooms')
+            ->where('type', 'Lab')
+            ->where('practical_type', $subject->required_lab)
+            ->where('branch_id', $branchId)
+            ->where('status', 'active')
+            ->get(['id', 'name', 'type', 'practical_type']);
+    } else {
+        $rooms = DB::table('rooms')
+            ->where('type', 'Normal')
+            ->where('branch_id', $branchId)
+            ->where('status', 'active')
+            ->get(['id', 'name', 'type', 'practical_type']);
+    }
+
+    return response()->json(['rooms' => $rooms]);
+}
+
+/**
+ * MODE 2: Vipindi vya mwalimu wa pili (kuchagua kipindi cha kubadilishana nacho).
+ */
+
+
+
+/**
+ * Angalia kama chumba kinafaa aina ya somo (Theory/Practical + Lab type).
+ * Hii ndiyo check pekee inayohitajika kwa Room Swap, kwa sababu siku/muda
+ * havibadiliki - hivyo teacher/NTA/subject/credit-hour conflicts haziwezi kutokea.
+ */
+/**
+ * Angalia kama chumba kinafaa aina ya somo (Theory/Practical + Lab type).
+ * Hii ndiyo check pekee inayohitajika kwa Room Swap, kwa sababu siku/muda
+ * havibadiliki - hivyo teacher/NTA/subject/credit-hour conflicts haziwezi kutokea.
+ */
+private function roomFitsSubject($room, $subject): array
+{
+    $errors = [];
+    $subjectType = strtolower(trim($subject->subject_type));
+    $roomType    = strtolower(trim($room->type));
+    $requiredLab = strtolower(trim($subject->required_lab));
+
+    if ($subjectType === 'theory' && $roomType === 'lab') {
+        $errors[] = "Chumba {$room->name} ni Lab, halifai kwa somo la 'Theory' ({$subject->subjectName}).";
+    }
+
+    if ($subjectType === 'practical') {
+        if ($roomType !== 'lab') {
+            $errors[] = "Somo la 'Practical' ({$subject->subjectName}) linahitaji Lab, lakini {$room->name} si Lab.";
+        } elseif (strtolower(trim($room->practical_type)) !== $requiredLab) {
+            $errors[] = "Lab {$room->name} si aina sahihi. Somo linahitaji Lab ya '{$requiredLab}'.";
+        }
+    }
+
+    return $errors;
+}
+
+/**
+ * MODE 1: Swap Classroom Only — FORCE SWAP.
+ * Day/Timeslot za kila upande HAZIBADILIKI. Chumba tu ndicho kinachobadilishana,
+ * hata kama chumba kilikuwa "kinatumika" - hiyo ndiyo maana ya swap.
+ * Check pekee: chumba kifae aina ya somo la kila upande.
+ */
+public function swapRoomOnly(Request $request)
+{
+    $request->validate([
+        'timetable_id' => 'required|integer|exists:timetables,id',
+        'new_room_id'  => 'required|integer|exists:rooms,id',
+    ]);
+
+    $branchId = Auth::user()->branch_id;
+
+    $entryA = DB::table('timetables')->where('id', $request->timetable_id)->where('branch_id', $branchId)->first();
+    if (!$entryA) {
+        return response()->json(['success' => false, 'message' => 'Kipindi hakikupatikana.'], 404);
+    }
+
+    $subjectA = DB::table('subjects')->where('id', $entryA->subject_id)->first();
+    $newRoom  = DB::table('rooms')->where('id', $request->new_room_id)->where('branch_id', $branchId)->first();
+    $oldRoom  = DB::table('rooms')->where('id', $entryA->room_id)->first();
+
+    if (!$subjectA || !$newRoom) {
+        return response()->json(['success' => false, 'message' => 'Data hazikupatikana.'], 404);
+    }
+
+    // Tafuta kama kuna kipindi kingine (Teacher B) kinachotumia chumba hicho SIKU/MUDA huohuo
+    $entryB = DB::table('timetables')
+        ->where('day_id', $entryA->day_id)
+        ->where('timeslot_id', $entryA->timeslot_id)
+        ->where('room_id', $newRoom->id)
+        ->where('branch_id', $branchId)
+        ->where('id', '!=', $entryA->id)
+        ->first();
+
+    $subjectB = $entryB ? DB::table('subjects')->where('id', $entryB->subject_id)->first() : null;
+
+    $errors = [];
+
+    // Angalia tu kama chumba kipya kinafaa somo la A
+    $errors = array_merge($errors, $this->roomFitsSubject($newRoom, $subjectA));
+
+    // Ikiwa kuna entryB, angalia kama chumba cha zamani (A) kinafaa somo la B
+    if ($entryB && $subjectB) {
+        $errors = array_merge($errors, $this->roomFitsSubject($oldRoom, $subjectB));
+    }
+
+    if (!empty($errors)) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Imeshindikana kubadilisha chumba:',
+            'errors'  => array_values(array_unique($errors)),
+        ], 422);
+    }
+
+    DB::beginTransaction();
+    try {
+        DB::table('timetables')->where('id', $entryA->id)->update([
+            'room_id'    => $newRoom->id,
+            'updated_at' => now(),
+        ]);
+
+        if ($entryB) {
+            DB::table('timetables')->where('id', $entryB->id)->update([
+                'room_id'    => $oldRoom->id,
+                'updated_at' => now(),
+            ]);
+        }
+
+        DB::commit();
+
+        return response()->json([
+            'success' => true,
+            'message' => $entryB
+                ? 'Vyumba vimebadilishwa kikamilifu kati ya walimu wawili!'
+                : 'Chumba kimebadilishwa kikamilifu!',
+        ]);
+    } catch (\Exception $e) {
+        DB::rollBack();
+        return response()->json(['success' => false, 'message' => 'Hitilafu imetokea: ' . $e->getMessage()], 500);
+    }
+}
+
+
+/**
+ * MODE 2: Orodha ya vipindi vya Mwalimu B ambavyo vinaweza kubadilishana na
+ * Mwalimu A BILA mgongano wa muda kwa upande wowote.
+ */
+public function teacherPeriods(Request $request)
+{
+    $branchId  = Auth::user()->branch_id;
+    $teacherId = $request->input('teacher_id');
+    $excludeId = $request->input('exclude_id'); // ID ya kipindi cha Mwalimu A
+
+    $entryA = DB::table('timetables')->where('id', $excludeId)->where('branch_id', $branchId)->first();
+    if (!$entryA) {
+        return response()->json(['periods' => []]);
+    }
+
+    $subjectA = DB::table('subjects')->where('id', $entryA->subject_id)->first();
+    if (!$subjectA) {
+        return response()->json(['periods' => []]);
+    }
+
+    $teacherAId = $subjectA->teacher_id;
+
+    $candidates = DB::table('timetables AS t')
+        ->join('subjects AS s', 't.subject_id', '=', 's.id')
+        ->join('days AS d', 't.day_id', '=', 'd.id')
+        ->join('timeslots AS ts', 't.timeslot_id', '=', 'ts.id')
+        ->join('rooms AS r', 't.room_id', '=', 'r.id')
+        ->where('s.teacher_id', $teacherId)
+        ->where('t.branch_id', $branchId)
+        ->where('t.id', '!=', $excludeId)
+        ->select(
+            't.id', 't.day_id', 't.timeslot_id',
+            's.subjectName as subject_name',
+            'd.day_name', 'ts.start_time', 'ts.end_time',
+            'r.name as room_name'
+        )
+        ->get();
+
+    $validPeriods = [];
+
+    foreach ($candidates as $c) {
+
+        $excludeIds = [$entryA->id, $c->id];
+
+        // Je, Mwalimu A tayari ana kipindi kingine wakati wa B (day/timeslot ya B)?
+        $aConflict = $this->teacherHasConflict($teacherAId, $c->day_id, $c->timeslot_id, $excludeIds, $branchId);
+
+        // Je, Mwalimu B tayari ana kipindi kingine wakati wa A (day/timeslot ya A)?
+        $bConflict = $this->teacherHasConflict($teacherId, $entryA->day_id, $entryA->timeslot_id, $excludeIds, $branchId);
+
+        if (!$aConflict && !$bConflict) {
+            $validPeriods[] = [
+                'id'           => $c->id,
+                'subject_name' => $c->subject_name,
+                'day_name'     => $c->day_name,
+                'start_time'   => $c->start_time,
+                'end_time'     => $c->end_time,
+                'room_name'    => $c->room_name,
+            ];
+        }
+    }
+
+    return response()->json(['periods' => $validPeriods]);
+}
+
+/**
+ * MODE 2: Swap Day + Timeslot.
+ * Room ya kila mmoja inabaki kama ilivyo. Check pekee ni upatikanaji wa muda
+ * wa walimu wenyewe (si NTA/subject/credit-hour).
+ */
+
+
+/**
+ * Angalia kama Mwalimu ana kipindi kingine wakati fulani.
+ */
+private function teacherHasConflict($teacherId, $dayId, $timeslotId, array $excludeIds, $branchId): bool
+{
+    return DB::table('timetables AS t')
+        ->join('subjects AS s', 't.subject_id', '=', 's.id')
+        ->where('s.teacher_id', $teacherId)
+        ->where('t.day_id', $dayId)
+        ->where('t.timeslot_id', $timeslotId)
+        ->where('t.branch_id', $branchId)
+        ->whereNotIn('t.id', $excludeIds)
+        ->exists();
+}
+
+/**
+ * Angalia kama Darasa/NTA Group (wanafunzi) tayari lina kipindi kingine wakati fulani.
+ */
+private function groupHasConflict($courseId, $ntaLevel, $semesterId, $dayId, $timeslotId, array $excludeIds, $branchId): bool
+{
+    return DB::table('timetables AS t')
+        ->join('subjects AS s', 't.subject_id', '=', 's.id')
+        ->where('s.course_id', $courseId)
+        ->where('s.nta_level', $ntaLevel)
+        ->where('s.semester_id', $semesterId)
+        ->where('t.day_id', $dayId)
+        ->where('t.timeslot_id', $timeslotId)
+        ->where('t.branch_id', $branchId)
+        ->whereNotIn('t.id', $excludeIds)
+        ->exists();
+}
+
+/**
+ * Angalia kama chumba tayari kinatumika wakati fulani (ulinzi wa kimwili -
+ * vyumba viwili haviwezi kutumika sehemu moja wakati mmoja).
+ */
+private function roomHasConflict($roomId, $dayId, $timeslotId, array $excludeIds, $branchId): bool
+{
+    return DB::table('timetables')
+        ->where('room_id', $roomId)
+        ->where('day_id', $dayId)
+        ->where('timeslot_id', $timeslotId)
+        ->where('branch_id', $branchId)
+        ->whereNotIn('id', $excludeIds)
+        ->exists();
+}
+
+/**
+ * MODE 2: Tafuta vipindi VYOTE vinavyowezekana kubadilishana na kipindi husika (entryA),
+ * bila kuhitaji mtumiaji achague mwalimu kwanza.
+ *
+ * Kipindi (entryB) kinaonekana kama "kinawezekana" endapo:
+ *  - Mwalimu wa A hana mgongano wa muda kwenye slot ya B
+ *  - Darasa la A (NTA group) halina mgongano wa muda kwenye slot ya B
+ *  - Mwalimu wa B hana mgongano wa muda kwenye slot ya A
+ *  - Darasa la B halina mgongano wa muda kwenye slot ya A
+ *  - Chumba cha A halitagongana na kingine kwenye slot ya B (na kinyume chake)
+ */
+public function validSwapSlots(Request $request)
+{
+    $branchId    = Auth::user()->branch_id;
+    $timetableId = $request->input('timetable_id');
+
+    $entryA = DB::table('timetables')->where('id', $timetableId)->where('branch_id', $branchId)->first();
+    if (!$entryA) {
+        return response()->json(['slots' => []]);
+    }
+
+    $subjectA = DB::table('subjects')->where('id', $entryA->subject_id)->first();
+    if (!$subjectA) {
+        return response()->json(['slots' => []]);
+    }
+
+    // Vipindi vyote vingine kwenye branch (candidates za kubadilishana nazo)
+    $candidates = DB::table('timetables AS t')
+        ->join('subjects AS s', 't.subject_id', '=', 's.id')
+        ->join('teachers AS te', 's.teacher_id', '=', 'te.id')
+        ->join('days AS d', 't.day_id', '=', 'd.id')
+        ->join('timeslots AS ts', 't.timeslot_id', '=', 'ts.id')
+        ->join('rooms AS r', 't.room_id', '=', 'r.id')
+        ->where('t.branch_id', $branchId)
+        ->where('t.id', '!=', $entryA->id)
+        ->select(
+            't.id', 't.day_id', 't.timeslot_id', 't.room_id', 't.subject_id',
+            's.teacher_id', 's.course_id', 's.nta_level', 's.semester_id',
+            's.subjectName as subject_name',
+            'd.day_name', 'ts.start_time', 'ts.end_time',
+            'r.name as room_name',
+            'te.firstname', 'te.middlename', 'te.lastname'
+        )
+        ->get();
+
+    $validSlots = [];
+
+    foreach ($candidates as $c) {
+
+        $excludeIds = [$entryA->id, $c->id];
+
+        // 1. Mwalimu A asiwe na mgongano wakati wa B
+        if ($this->teacherHasConflict($subjectA->teacher_id, $c->day_id, $c->timeslot_id, $excludeIds, $branchId)) {
+            continue;
+        }
+
+        // 2. Darasa la A lisiwe na mgongano wakati wa B
+        if ($this->groupHasConflict($subjectA->course_id, $subjectA->nta_level, $subjectA->semester_id, $c->day_id, $c->timeslot_id, $excludeIds, $branchId)) {
+            continue;
+        }
+
+        // 3. Mwalimu B asiwe na mgongano wakati wa A
+        if ($this->teacherHasConflict($c->teacher_id, $entryA->day_id, $entryA->timeslot_id, $excludeIds, $branchId)) {
+            continue;
+        }
+
+        // 4. Darasa la B lisiwe na mgongano wakati wa A
+        if ($this->groupHasConflict($c->course_id, $c->nta_level, $c->semester_id, $entryA->day_id, $entryA->timeslot_id, $excludeIds, $branchId)) {
+            continue;
+        }
+
+        // 5. Chumba cha A (room1) kisigongane na kingine wakati wa B
+        if ($this->roomHasConflict($entryA->room_id, $c->day_id, $c->timeslot_id, $excludeIds, $branchId)) {
+            continue;
+        }
+
+        // 6. Chumba cha B (room2) kisigongane na kingine wakati wa A
+        if ($this->roomHasConflict($c->room_id, $entryA->day_id, $entryA->timeslot_id, $excludeIds, $branchId)) {
+            continue;
+        }
+
+        $validSlots[] = [
+            'id'           => $c->id,
+            'day_name'     => $c->day_name,
+            'start_time'   => $c->start_time,
+            'end_time'     => $c->end_time,
+            'subject_name' => $c->subject_name,
+            'teacher_name' => trim("{$c->firstname} {$c->middlename} {$c->lastname}"),
+            'room_name'    => $c->room_name,
+        ];
+    }
+
+    return response()->json(['slots' => $validSlots]);
+}
+
+/**
+ * MODE 2: Fanya swap ya siku+muda. Darasa/subject/room za kila upande hazibadiliki -
+ * ni day_id na timeslot_id tu vinavyobadilishana.
+ */
+public function swapSchedule(Request $request)
 {
     $request->validate([
         'timetable_id_1' => 'required|integer|exists:timetables,id',
         'timetable_id_2' => 'required|integer|exists:timetables,id|different:timetable_id_1',
     ]);
- 
+
     $branchId = Auth::user()->branch_id;
- 
-    $entry1 = DB::table('timetables')
-        ->where('id', $request->timetable_id_1)
-        ->where('branch_id', $branchId)
-        ->first();
- 
-    $entry2 = DB::table('timetables')
-        ->where('id', $request->timetable_id_2)
-        ->where('branch_id', $branchId)
-        ->first();
- 
+
+    $entry1 = DB::table('timetables')->where('id', $request->timetable_id_1)->where('branch_id', $branchId)->first();
+    $entry2 = DB::table('timetables')->where('id', $request->timetable_id_2)->where('branch_id', $branchId)->first();
+
     if (!$entry1 || !$entry2) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Kipindi kimoja au vyote havikupatikana.',
-        ], 404);
+        return response()->json(['success' => false, 'message' => 'Kipindi kimoja au vyote havikupatikana.'], 404);
     }
- 
+
     $subject1 = DB::table('subjects')->where('id', $entry1->subject_id)->first();
     $subject2 = DB::table('subjects')->where('id', $entry2->subject_id)->first();
- 
-    $room1 = DB::table('rooms')->where('id', $entry1->room_id)->first();
-    $room2 = DB::table('rooms')->where('id', $entry2->room_id)->first();
- 
-    $errors = [];
- 
-    // --- Angalia chumba kinafaa kwa somo litakalohamia huko ---
-    if (!$this->roomSuitsSubject($room2, $subject1)) {
-        $errors[] = "Chumba {$room2->name} hakifai kwa somo {$subject1->subjectName} (aina ya chumba haifanani).";
-    }
-    if (!$this->roomSuitsSubject($room1, $subject2)) {
-        $errors[] = "Chumba {$room1->name} hakifai kwa somo {$subject2->subjectName} (aina ya chumba haifanani).";
-    }
- 
-    // --- Angalia migongano baada ya kubadilishana ---
+
     $excludeIds = [$entry1->id, $entry2->id];
- 
-    $errors = array_merge(
-        $errors,
-        $this->findSwapConflicts($entry2->day_id, $entry2->timeslot_id, $entry2->room_id, $subject1, $excludeIds, $branchId),
-        $this->findSwapConflicts($entry1->day_id, $entry1->timeslot_id, $entry1->room_id, $subject2, $excludeIds, $branchId)
-    );
- 
+    $errors = [];
+
+    if ($this->teacherHasConflict($subject1->teacher_id, $entry2->day_id, $entry2->timeslot_id, $excludeIds, $branchId)) {
+        $errors[] = "Mwalimu wa {$subject1->subjectName} tayari ana kipindi kingine wakati huo.";
+    }
+
+    if ($this->groupHasConflict($subject1->course_id, $subject1->nta_level, $subject1->semester_id, $entry2->day_id, $entry2->timeslot_id, $excludeIds, $branchId)) {
+        $errors[] = "Darasa la {$subject1->subjectName} tayari lina kipindi kingine wakati huo.";
+    }
+
+    if ($this->teacherHasConflict($subject2->teacher_id, $entry1->day_id, $entry1->timeslot_id, $excludeIds, $branchId)) {
+        $errors[] = "Mwalimu wa {$subject2->subjectName} tayari ana kipindi kingine wakati huo.";
+    }
+
+    if ($this->groupHasConflict($subject2->course_id, $subject2->nta_level, $subject2->semester_id, $entry1->day_id, $entry1->timeslot_id, $excludeIds, $branchId)) {
+        $errors[] = "Darasa la {$subject2->subjectName} tayari lina kipindi kingine wakati huo.";
+    }
+
+    if ($this->roomHasConflict($entry1->room_id, $entry2->day_id, $entry2->timeslot_id, $excludeIds, $branchId)) {
+        $errors[] = "Chumba la {$subject1->subjectName} litagongana na kingine wakati huo.";
+    }
+
+    if ($this->roomHasConflict($entry2->room_id, $entry1->day_id, $entry1->timeslot_id, $excludeIds, $branchId)) {
+        $errors[] = "Chumba la {$subject2->subjectName} litagongana na kingine wakati huo.";
+    }
+
     if (!empty($errors)) {
         return response()->json([
             'success' => false,
-            'message' => 'Imeshindikana kubadilishana kwa sababu ya migongano hii:',
+            'message' => 'Imeshindikana kubadilishana:',
             'errors'  => array_values(array_unique($errors)),
         ], 422);
     }
- 
+
     DB::beginTransaction();
     try {
         DB::table('timetables')->where('id', $entry1->id)->update([
             'day_id'      => $entry2->day_id,
             'timeslot_id' => $entry2->timeslot_id,
-            'room_id'     => $entry2->room_id,
             'updated_at'  => now(),
         ]);
- 
+
         DB::table('timetables')->where('id', $entry2->id)->update([
             'day_id'      => $entry1->day_id,
             'timeslot_id' => $entry1->timeslot_id,
-            'room_id'     => $entry1->room_id,
             'updated_at'  => now(),
         ]);
- 
+
         DB::commit();
- 
+
         return response()->json([
             'success' => true,
-            'message' => 'Vipindi vimebadilishwa kikamilifu kati ya walimu wawili!',
+            'message' => 'Siku na muda vimebadilishwa kikamilifu!',
         ]);
- 
     } catch (\Exception $e) {
         DB::rollBack();
- 
-        return response()->json([
-            'success' => false,
-            'message' => 'Hitilafu imetokea: ' . $e->getMessage(),
-        ], 500);
+        return response()->json(['success' => false, 'message' => 'Hitilafu imetokea: ' . $e->getMessage()], 500);
     }
 }
+
    
 
 

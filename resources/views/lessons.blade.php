@@ -196,91 +196,137 @@ INSTITUTE OF PUBLIC AND ADMINISTRATION
 
     <tbody>
 
-        @php $i = 1; @endphp
+@php $i = 1; @endphp
 
-        @forelse($lessons as $lesson)
+@forelse($lessons as $lesson)
 
-        <tr>
+<tr>
 
-            <td>{{ $i++ }}</td>
+    <td class="{{ ($lesson->leave_status == 'stop' || $lesson->leave_status == 'completed') ? 'bg-danger text-white' : '' }}">{{ $i++ }}</td>
 
-            <td>{{ $lesson->subjectName }}</td>
+    <td class="{{ ($lesson->leave_status == 'stop' || $lesson->leave_status == 'completed') ? 'bg-danger text-white' : '' }}">
+        {{ $lesson->subjectName }}
 
-            <td>{{ $lesson->subjectCode ?? '-' }}</td>
+        @if($lesson->leave_status=='stop')
+            <br>
+            <small class="text-white fw-bold">
+                Somo limesimamishwa
+            </small>
 
-            <td>
-                {{ $lesson->start_time }} - {{ $lesson->end_time }}
-            </td>
+            @if($lesson->reason=="Leave")
+                <br>
+                <small class="text-white fw-bold">Mwalimu yuko likizo/semina</small>
+            @elseif($lesson->reason=="Syllabus Completed")
+               <br>
+                <small>Mwalimu amemaliza Topics(Syllabus)</small>
+            @endif
+        @endif
 
-            <td>{{ $lesson->room_name ?? 'N/A' }}</td>
+    </td>
 
-            <td>
-                {{ $lesson->firstname ?? '' }} {{ $lesson->middlename ?? '' }} {{ $lesson->lastname ?? '' }}
-            </td>
+    <td class="{{ ($lesson->leave_status == 'stop' || $lesson->leave_status == 'completed') ? 'bg-danger text-white' : '' }}">{{ $lesson->subjectCode }}</td>
 
-            <td>
-                @if($lesson->status == 'present')
-                    <span class="badge bg-success">Present</span>
-                @elseif ($lesson->status == 'emergency')
-                    <span class="badge bg-info">Emergency</span>
-                @else
-                    <span class="badge bg-danger">Absent</span>
-                @endif
-            </td>
+    <td class="{{ ($lesson->leave_status == 'stop' || $lesson->leave_status == 'completed') ? 'bg-danger text-white' : '' }}">{{ $lesson->start_time }} - {{ $lesson->end_time }}</td>
 
-            <td>
+    <td class="{{ ($lesson->leave_status == 'stop' || $lesson->leave_status == 'completed') ? 'bg-danger text-white' : '' }}">{{ $lesson->room_name ?? 'N/A' }}</td>
 
-@if($lesson->status == 'absent')
+    <td class="{{ ($lesson->leave_status == 'stop' || $lesson->leave_status == 'completed') ? 'bg-danger text-white' : '' }}">
+        {{ $lesson->firstname }}
+        {{ $lesson->middlename }}
+        {{ $lesson->lastname }}
+    </td>
 
-    <!-- Attend -->
-    <button class="btn btn-success btn-sm"
-        data-bs-toggle="modal"
-        data-bs-target="#confirmPresentModal"
-        data-id="{{ $lesson->timetable_id }}">
-        Attend
-    </button>
+    <td class="{{ ($lesson->leave_status == 'stop' || $lesson->leave_status == 'completed') ? 'bg-danger text-white' : '' }}">
 
-   
+        @if($lesson->leave_status=='stop')
 
+            <span class="badge bg-dark">Lesson Suspended</span>
 
-@else
+        @elseif($lesson->status=='present')
 
-    <button class="btn btn-success btn-sm" disabled>
-        Present
-    </button>
+            <span class="badge bg-success">Present</span>
 
-@endif
+        @elseif($lesson->status=='emergency')
 
-</td>
-<td>
-    @if($lesson->status == 'present')
-    <button class="btn btn-success btn-sm" disabled>
-        Present
-    </button>
-    @else
-    <button class="btn btn-warning btn-sm"
-        data-bs-toggle="modal"
-        data-bs-target="#emergencyModal"
-        data-id="{{ $lesson->timetable_id }}">
-        Emergency
-    </button>
-    @endif
-</td>
+            <span class="badge bg-info">Emergency</span>
 
+        @else
 
-        </tr>
+            <span class="badge bg-danger">Absent</span>
 
-        @empty
+        @endif
 
-        <tr>
-            <td colspan="100%" class="text-center">
-                No lessons available
-            </td>
-        </tr>
+    </td>
 
-        @endforelse
+    <td class="{{ ($lesson->leave_status == 'stop' || $lesson->leave_status == 'completed') ? 'bg-danger text-white' : '' }}">
 
-    </tbody>
+        @if($lesson->leave_status=='stop')
+
+            <button class="btn btn-secondary btn-sm" disabled>
+                Suspended
+            </button>
+
+        @elseif($lesson->status=='absent')
+
+            <button
+                class="btn btn-success btn-sm"
+                data-bs-toggle="modal"
+                data-bs-target="#confirmPresentModal"
+                data-id="{{ $lesson->timetable_id }}">
+                Attend
+            </button>
+
+        @else
+
+            <button class="btn btn-success btn-sm" disabled>
+                Present
+            </button>
+
+        @endif
+
+    </td>
+
+    <td class="{{ ($lesson->leave_status == 'stop' || $lesson->leave_status == 'completed') ? 'bg-danger text-white' : '' }}">
+
+        @if($lesson->leave_status=='stop')
+
+            <button class="btn btn-secondary btn-sm" disabled>
+                Suspended
+            </button>
+
+        @elseif($lesson->status=='present')
+
+            <button class="btn btn-success btn-sm" disabled>
+                Present
+            </button>
+
+        @else
+
+            <button
+                class="btn btn-warning btn-sm"
+                data-bs-toggle="modal"
+                data-bs-target="#emergencyModal"
+                data-id="{{ $lesson->timetable_id }}">
+                Emergency
+            </button>
+
+        @endif
+
+    </td>
+
+</tr>
+
+@empty
+
+<tr>
+    <td colspan="9" class="text-center">
+        No lessons available
+    </td>
+</tr>
+
+@endforelse
+
+</tbody>
 
 </table>
     @endif

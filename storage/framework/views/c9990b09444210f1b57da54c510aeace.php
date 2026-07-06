@@ -204,6 +204,8 @@ INSTITUTE OF PUBLIC AND ADMINISTRATION
 <div class="table-responsive">
   
 
+<div id="printArea">
+
 <table class="table table-bordered">
 
     <thead>
@@ -255,48 +257,48 @@ INSTITUTE OF PUBLIC AND ADMINISTRATION
 
                 <tr>
 
-                    
                     <?php if(!$dayPrinted): ?>
 
                         <td rowspan="<?php echo e($totalRowsForDay); ?>"
-                            style="writing-mode: vertical-lr; text-align:center; font-weight:bold;">
+                            style="writing-mode: vertical-lr;text-align:center;font-weight:bold">
+
                             <?php echo e($dayName); ?>
+
 
                         </td>
 
-                        <?php $dayPrinted = true; ?>
+                        <?php $dayPrinted=true; ?>
 
                     <?php endif; ?>
 
-                    
                     <td>
+
                         <?php echo e($start->format('H:i')); ?>
 
+
                         -
+
                         <?php echo e($start->copy()->addHour()->format('H:i')); ?>
 
+
                     </td>
 
-                    
-                    <td>
-                        <span><?php echo e($entry->subjectName); ?></span>
-                    </td>
+                    <td><?php echo e($entry->subjectName); ?></td>
 
-                    
                     <td>
+
                         <?php echo e($entry->firstname); ?>
+
 
                         <?php echo e($entry->middlename); ?>
 
+
                         <?php echo e($entry->lastname); ?>
 
-                    </td>
-
-                    
-                    <td>
-                        <?php echo e($entry->room_name); ?>
 
                     </td>
+
+                    <td><?php echo e($entry->room_name); ?></td>
 
                 </tr>
 
@@ -316,6 +318,25 @@ INSTITUTE OF PUBLIC AND ADMINISTRATION
     </tbody>
 
 </table>
+
+</div>
+<div class="mt-3 text-end">
+
+    <button class="btn btn-primary nodis"
+        onclick="printTimetable(this)"
+        data-course="<?php echo e($courseName ?? ''); ?>"
+        data-nta="<?php echo e($ntaLevel ?? ''); ?>"
+        data-group="<?php echo e($groupName ?? ''); ?>"
+        data-semester="<?php echo e($semester ?? ''); ?>"
+        data-active="<?php echo e($activeSemester ?? ''); ?>">
+
+    <i class="bi bi-printer"></i>
+
+    Print Timetable
+
+</button>
+
+</div>
 
 
 
@@ -337,7 +358,135 @@ INSTITUTE OF PUBLIC AND ADMINISTRATION
 <!-- MODAL -->
 
 
+<script>
 
+function printTimetable(button){
+
+    const courseName = button.getAttribute("data-course") || "";
+    const ntaLevel  = button.getAttribute("data-nta") || "";
+    const groupName = button.getAttribute("data-group") || "";
+    const semester  = button.getAttribute("data-semester") || "";
+    const active    = button.getAttribute("data-active") || "";
+
+    const table = document.getElementById("printArea").innerHTML;
+
+    const printWindow = window.open('', '', 'width=1200,height=900');
+
+    printWindow.document.write(`
+
+        <html>
+
+        <head>
+
+            <title>${courseName} Timetable</title>
+
+            <style>
+
+                @page{
+                    size:A4 portrait;
+                    margin:10mm;
+                }
+
+                body{
+                    margin:25px;
+                    background:#fff;
+                    color:#000;
+                    font-family:'Times New Roman',Times,serif;
+                }
+
+                h2,h4,h5{
+                    text-align:center;
+                    margin:2px 0;
+                    line-height:1.5;
+                }
+
+                .date{
+                    text-align:center;
+                    font-style:italic;
+                    margin-bottom:20px;
+                }
+
+                table{
+                    width:100%;
+                    border-collapse:collapse;
+                    margin-top:20px;
+                    font-size:13px;
+                }
+
+                th,
+                td{
+                    border:1px solid #000;
+                    padding:7px;
+                    text-align:center;
+                    vertical-align:middle;
+                }
+
+                th{
+                    background:#e9ecef;
+                    font-weight:bold;
+                    text-transform:uppercase;
+                }
+
+                tr:nth-child(even){
+                    background:#f8f9fa;
+                }
+
+            </style>
+
+        </head>
+
+        <body onload="window.print();window.close();">
+
+            <h2>THE INSTITUTE OF PUBLIC AND ADMINISTRATION</h2>
+
+            <div class="date">
+
+                Generated on
+
+                ${new Date().toLocaleDateString('en-GB',{
+                    day:'2-digit',
+                    month:'long',
+                    year:'numeric'
+                })}
+
+            </div>
+
+            <h4>
+
+                ${courseName.toUpperCase()}
+
+                ${ntaLevel ? " - " + ntaLevel.toUpperCase() : ""}
+
+            </h4>
+
+            ${groupName
+                ? `<h5>GROUP : ${groupName.toUpperCase()}</h5>`
+                : ""
+            }
+
+            <h5>
+
+                TIMETABLE
+
+                ${semester ? "FOR " + semester.toUpperCase() : ""}
+
+                ${active ? " : " + active.toUpperCase() : ""}
+
+            </h5>
+
+            ${table}
+
+        </body>
+
+        </html>
+
+    `);
+
+    printWindow.document.close();
+
+}
+
+</script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
@@ -360,198 +509,7 @@ document.getElementById('modal_timetable_id').value = id;
 
 </script>
 
-<script>
 
-function printTimetable(button) {
-
-    const timetableData = JSON.parse(button.getAttribute("data-timetable") || '{}');
-
-    const courseName = button.getAttribute("data-course") || "";
-    const ntaLevel = button.getAttribute("data-nta") || "";
-    const groupName = button.getAttribute("data-group") || "";
-    const semester = button.getAttribute("data-semester") || "";
-    const active = button.getAttribute("data-active") || "";
-
-    // ===== Get unique timeslots =====
-    let timeslots = [];
-
-    for (let day in timetableData) {
-
-        timetableData[day].forEach(e => {
-
-            const slot = `${e.start_time.slice(0,5)} - ${e.end_time.slice(0,5)}`;
-
-            if (!timeslots.includes(slot)) {
-                timeslots.push(slot);
-            }
-
-        });
-
-    }
-
-    // ===== Sort timeslots =====
-    timeslots.sort((a,b)=>{
-        const startA = a.split(' - ')[0];
-        const startB = b.split(' - ')[0];
-        return startA.localeCompare(startB);
-    });
-
-    const days = Object.keys(timetableData);
-
-    // ===== Open Print Window =====
-    const printWindow = window.open('', '', 'width=1200,height=900');
-
-    printWindow.document.write(`
-
-        <html>
-        <head>
-
-        <title>${courseName} - ${ntaLevel} Timetable</title>
-
-        <style>
-
-        @page{margin:0}
-
-        body{
-            margin:40px;
-            background:white;
-            font-family:'Times New Roman', Times, serif;
-            color:black;
-        }
-
-        h2,h4,h5{
-            text-align:center;
-            margin:2px 0;
-            line-height:1.4;
-        }
-
-        table{
-            width:100%;
-            border-collapse:collapse;
-            font-size:13px;
-            margin-top:25px;
-        }
-
-        th,td{
-            border:1px solid #000;
-            padding:6px;
-            text-align:center;
-            vertical-align:middle;
-        }
-
-        th{
-            background:#e9ecef;
-            text-transform:uppercase;
-            font-weight:bold;
-        }
-
-        td:first-child{
-            font-weight:bold;
-            background:#f2f2f2;
-            text-transform:uppercase;
-        }
-
-        tr:nth-child(even){
-            background:#f8f9fa;
-        }
-
-        </style>
-
-        </head>
-
-        <body onload="window.print();window.close();">
-
-        <h2>THE INSTITUTE OF PUBLIC AND ADMINISTRATION</h2>
-
-        <h4>
-        ${courseName.toUpperCase()} - ${ntaLevel.toUpperCase()}
-        </h4>
-
-        ${groupName ? `<h5>GROUP: ${groupName.toUpperCase()}</h5>` : ""}
-
-        <h5>
-        TIMETABLE FOR ${semester.toUpperCase()}
-        ${active ? ': ' + active.toUpperCase() : ""}
-        </h5>
-
-        <table>
-
-        <thead>
-
-        <tr>
-
-        <th>DAY / TIME</th>
-
-        ${timeslots.map((slot,index)=>`
-<th>
-
-<div style="font-size: 30px;">${index+1}</div>
-
-<br>
-
-${slot}
-
-</th>
-`).join('')}
-
-        </tr>
-
-        </thead>
-
-        <tbody>
-
-        ${days.map(day=>`
-
-            <tr>
-
-            <td>${day.toUpperCase()}</td>
-
-            ${timeslots.map(slot=>{
-
-                const entry = timetableData[day].find(e =>
-                    `${e.start_time.slice(0,5)} - ${e.end_time.slice(0,5)}` === slot
-                );
-
-                if(entry){
-
-                    return `
-                    <td>
-
-                    <strong>${entry.subjectName}</strong><br>
-
-                    ${entry.firstname} ${entry.middlename} ${entry.lastname}<br>
-
-                    <strong>${entry.room_name}</strong>
-
-                    </td>
-                    `;
-
-                }else{
-
-                    return `<td></td>`;
-
-                }
-
-            }).join('')}
-
-            </tr>
-
-        `).join('')}
-
-        </tbody>
-
-        </table>
-
-        </body>
-
-        </html>
-
-    `);
-
-    printWindow.document.close();
-}
-
-</script>
 
 </body>
 </html><?php /**PATH C:\Users\PC\Documents\Timetable\resources\views/studenttbl.blade.php ENDPATH**/ ?>

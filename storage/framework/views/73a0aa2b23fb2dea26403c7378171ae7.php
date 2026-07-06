@@ -226,7 +226,7 @@
                     <tbody>
                       
                        
-                        <?php $__currentLoopData = $absent_lesson; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $abs): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                        <?php $__empty_1 = true; $__currentLoopData = $absent_lesson; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $abs): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
 <tr>
   
     
@@ -241,7 +241,12 @@
     <span style="color: red;font-weight: bold"><?php echo e($abs->remaining_days); ?> Days Remaining</span>
 </td>
 </tr>
-<?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+<?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
+
+<tr>
+    <td colspan="100%" style="text-align: center">No lesson marked as emergency</td>
+</tr>
+<?php endif; ?>
 
                      
                         

@@ -190,7 +190,12 @@
                         @foreach($groupedByDay as $dayName => $entriesByDay)
 
                             @foreach($entriesByDay as $key => $entry)
-                                <tr>
+                                <tr
+@if($entry->leave_status=="stop")
+style="text-decoration: line-through;
+background:#f8d7da;"
+@endif
+>
 
                                     {{-- Day with rowspan --}}
                                     @if($key === 0)
@@ -218,16 +223,34 @@
                                     <td>{{ $entry->room_name }}</td>
 
                                     <td>
-                                        @if($entry->status == "present")
-                                            <span style="color: green;">
-                                                Already Taught
-                                            </span>
-                                        @else
-                                            <span style="color: red;">
-                                                Subject Not Taught
-                                            </span>
-                                        @endif
-                                    </td>
+
+@if($entry->leave_status == "stop")
+
+    <span class="badge bg-danger">
+        Teacher On Leave
+    </span>
+
+@elseif($entry->leave_status == "completed")
+
+    <span class="badge bg-primary">
+        Syllabus Completed
+    </span>
+
+@elseif($entry->status == "present")
+
+    <span class="badge bg-success">
+        Already Taught
+    </span>
+
+@else
+
+    <span class="badge bg-warning text-dark">
+        Subject Not Taught
+    </span>
+
+@endif
+
+</td>
 
                                 </tr>
                             @endforeach

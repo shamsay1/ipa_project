@@ -226,7 +226,7 @@
                     <tbody>
                       
                        
-                        @foreach ($absent_lesson as $abs)
+                        @forelse ($absent_lesson as $abs)
 <tr>
   
     {{-- SUBJECT --}}
@@ -240,7 +240,12 @@
     <span style="color: red;font-weight: bold">{{ $abs->remaining_days }} Days Remaining</span>
 </td>
 </tr>
-@endforeach
+@empty
+
+<tr>
+    <td colspan="100%" style="text-align: center">No lesson marked as emergency</td>
+</tr>
+@endforelse
 
                      
                         

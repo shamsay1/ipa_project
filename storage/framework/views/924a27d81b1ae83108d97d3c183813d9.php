@@ -193,7 +193,12 @@
                         <?php $__currentLoopData = $groupedByDay; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $dayName => $entriesByDay): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
 
                             <?php $__currentLoopData = $entriesByDay; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $key => $entry): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                                <tr>
+                                <tr
+<?php if($entry->leave_status=="stop"): ?>
+style="text-decoration: line-through;
+background:#f8d7da;"
+<?php endif; ?>
+>
 
                                     
                                     <?php if($key === 0): ?>
@@ -226,16 +231,34 @@
                                     <td><?php echo e($entry->room_name); ?></td>
 
                                     <td>
-                                        <?php if($entry->status == "present"): ?>
-                                            <span style="color: green;">
-                                                Already Taught
-                                            </span>
-                                        <?php else: ?>
-                                            <span style="color: red;">
-                                                Subject Not Taught
-                                            </span>
-                                        <?php endif; ?>
-                                    </td>
+
+<?php if($entry->leave_status == "stop"): ?>
+
+    <span class="badge bg-danger">
+        Teacher On Leave
+    </span>
+
+<?php elseif($entry->leave_status == "completed"): ?>
+
+    <span class="badge bg-primary">
+        Syllabus Completed
+    </span>
+
+<?php elseif($entry->status == "present"): ?>
+
+    <span class="badge bg-success">
+        Already Taught
+    </span>
+
+<?php else: ?>
+
+    <span class="badge bg-warning text-dark">
+        Subject Not Taught
+    </span>
+
+<?php endif; ?>
+
+</td>
 
                                 </tr>
                             <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
