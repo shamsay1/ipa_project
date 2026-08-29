@@ -504,7 +504,7 @@
 @endauth
 
    @auth
-    @if(auth()->user()->role === 'Supervisor')
+    @if(auth()->user()->role === 'Supervisor' || auth()->user()->role === 'naibu')
 
 <li class="nav-item">
     <a href="{{ route('supdash') }}" 
@@ -513,12 +513,12 @@
     </a>
 </li>
 
-<li class="nav-item">
+{{-- <li class="nav-item">
     <a href="{{ route('cr_info.index') }}" 
        class="nav-link {{ request()->routeIs('cr_info.index') ? 'active' : '' }}">
         <i class="bi bi-person-plus-fill"></i> Registration
     </a>
-</li>
+</li> --}}
 
 <li class="nav-item">
     <a href="/supervision" 
@@ -544,7 +544,13 @@
 <li class="nav-item">
     <a href="/report7" 
        class="nav-link {{ request()->routeIs('report7') ? 'active' : '' }}">
-        <i class="bi bi-bar-chart-line"></i> Report
+        <i class="bi bi-bar-chart-line"></i> Subject attendance
+    </a>
+</li>
+<li class="nav-item">
+    <a href="/report8" 
+       class="nav-link {{ request()->routeIs('report8') ? 'active' : '' }}">
+        <i class="bi bi-bar-chart-line"></i> Teacher's attendance
     </a>
 </li>
 

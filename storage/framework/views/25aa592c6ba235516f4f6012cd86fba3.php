@@ -165,6 +165,7 @@
     <select name="role" id="department" class="form-control" required>
                  <option value="teacher" <?php echo e($teacher->role == "teacher" ? "selected" : ""); ?>>Teacher</option>
                 <option value="Supervisor" <?php echo e($teacher->role == "Supervisor" ? "selected" : ""); ?>>Supervisor</option>
+                <option value="naibu" <?php echo e($teacher->role == "naibu" ? "selected" : ""); ?>>Deputy</option>
     </select>
 </div>
                 <div class="col-md-4 mb-3">

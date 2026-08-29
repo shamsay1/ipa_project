@@ -181,6 +181,8 @@
         <li><a href="<?php echo e(url('/teachettbl')); ?>">Timetable</a></li>
         <li><a href="<?php echo e(url('/profile')); ?>">Profile</a></li>
         <li><a href="<?php echo e(url('/attendance')); ?>">Emergency less</a></li>
+        <li><a href="<?php echo e(url('/attendance1')); ?>">View attendance</a></li>
+
 
         
         <li class="ms-auto">

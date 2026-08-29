@@ -51,6 +51,9 @@ class Subject extends Model
     {
         return $this->belongsTo(Branch::class);
     }
+    public function attendances() {
+    return $this->hasMany(TeacherAttendance::class, 'subject_id');
+}
    
 
 }

@@ -124,6 +124,19 @@ public function TeacherImport(Request $request)
 
     return view('viewattendance', compact('absent_lesson'));
 }
+
+public function attendance1()
+    {
+        
+        $teacherId = Auth::user()->id;
+        $subjects = Subject::where('teacher_id', $teacherId)
+            ->with(['attendances' => function($query) {
+                $query->orderBy('created_at', 'desc');
+            }])
+            ->get();
+
+        return view('viewattend', compact('subjects'));
+    }
 public function updateTeacherException(Request $request)
 {
     $request->validate([
@@ -500,6 +513,65 @@ public function updateTeacherException(Request $request)
         'selectedSemester',
         'startDate',
         'endDate'
+    ));
+}
+public function report8(Request $request)
+{
+    $selectedDepartment = $request->department_id;
+
+    // Departments kwa ajili ya filter
+    $departments = Department::orderBy('deptName')->get();
+
+    // Mwanzoni hakuna data
+    $teachers = collect();
+
+    // Leta data baada ya kuchagua department tu
+    if (!empty($selectedDepartment)) {
+
+        $teachers = Teacher::with('subjects')
+            ->where('deptId', $selectedDepartment)
+            ->orderBy('firstname')
+            ->get();
+
+        foreach ($teachers as $teacher) {
+
+            $overallPresent = 0;
+            $overallTotal = 0;
+
+            foreach ($teacher->subjects as $subject) {
+
+                $present = TeacherAttendance::where('teacher_id', $teacher->id)
+                    ->where('subject_id', $subject->id)
+                    ->where('status', 'present')
+                    ->count();
+
+                $absent = TeacherAttendance::where('teacher_id', $teacher->id)
+                    ->where('subject_id', $subject->id)
+                    ->whereIn('status', ['absent', 'emergency'])
+                    ->count();
+
+                $total = $present + $absent;
+
+                $subject->total_taught = $present;
+                $subject->total_not_taught = $absent;
+                $subject->percentage = $total > 0
+                    ? round(($present / $total) * 100, 2)
+                    : 0;
+
+                $overallPresent += $present;
+                $overallTotal += $total;
+            }
+
+            $teacher->overall = $overallTotal > 0
+                ? round(($overallPresent / $overallTotal) * 100, 2)
+                : 0;
+        }
+    }
+
+    return view('report8', compact(
+        'teachers',
+        'departments',
+        'selectedDepartment'
     ));
 }
     public function teachersubject()

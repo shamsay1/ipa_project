@@ -165,6 +165,7 @@
     <select name="role" id="department" class="form-control" required>
                  <option value="teacher" {{ $teacher->role == "teacher" ? "selected" : ""}}>Teacher</option>
                 <option value="Supervisor" {{ $teacher->role == "Supervisor" ? "selected" : ""}}>Supervisor</option>
+                <option value="naibu" {{ $teacher->role == "naibu" ? "selected" : ""}}>Deputy</option>
     </select>
 </div>
                 <div class="col-md-4 mb-3">

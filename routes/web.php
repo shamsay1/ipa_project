@@ -121,6 +121,7 @@ Route::middleware(['auth:teacher'])->group(function () {
     Route::resource('cr_info', CrInfoController::class);
     Route::get("/supervision",[TeacherController::class,"supervision"])->name("supervision");
     Route::get("/report7",[TeacherController::class,"report7"])->name("report7");
+    Route::get("/report8",[TeacherController::class,"report8"])->name("report8");
     Route::get('/subject-attendance-details', [TeacherController::class, 'getAttendanceDetails'])->name('subject.attendance.details');
     Route::get("/adminprofile",[TeacherController::class,"adprofile"])->name("sup");
     Route::put('/cr-update/{id}',[CrInfoController::class,'update'])->name('cr.update');
@@ -159,6 +160,7 @@ Route::middleware(['auth:teacher'])->group(function () {
     Route::get("/class/template",[RoomController::class,"roomTemplate"])->name("class.template");
     Route::get("/course/template",[CourseController::class,"export"])->name("course.template");
     Route::get("/attendance",[TeacherController::class,"attendance"])->name("attendance");
+    Route::get("/attendance1",[TeacherController::class,"attendance1"])->name("attendance1");
 
     Route::get('/semester/{id}/status/{status}', [SemesterController::class, 'changeStatus'])->name('semester.changeStatus');
 

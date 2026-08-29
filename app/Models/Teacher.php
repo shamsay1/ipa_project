@@ -32,9 +32,10 @@ class Teacher extends Authenticatable
         'remember_token',
     ];
     protected $guard = 'teacher';
-    public function subjects(){
-        return $this->hasMany(Subject::class,"subject_id");
-    }
+    public function subjects()
+{
+    return $this->hasMany(Subject::class, 'teacher_id', 'id');
+}
     public function department(){
         return $this->belongsTo(Department::class,"deptId");
     }

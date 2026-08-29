@@ -50,6 +50,9 @@ class LoginController extends Controller
         if ($teacher->role === "Supervisor") {
             return redirect()->route('supdash');
         }
+        if ($teacher->role === "naibu") {
+            return redirect()->route('supdash');
+        }
 
         return redirect()->route('dash1');
         }else{
